@@ -1,0 +1,70 @@
+D:\platform-tools-latest-windows\platform-tools>adb shell getprop ro.build.version.release
+adb shell getprop ro.build.version.sdk11
+
+D:\platform-tools-latest-windows\platform-tools>adb shell getprop ro.product.manufacturer
+Newland
+
+D:\platform-tools-latest-windows\platform-tools>adb shell getprop ro.product.model
+NLS-MT90
+
+D:\platform-tools-latest-windows\platform-tools>adb shell getprop ro.build.fingerprint
+Newland/NLS-MT9055-GL/NLS-MT9055-GL:11/RP1A.200720.011/1679381905:user/release-keys
+
+D:\platform-tools-latest-windows\platform-tools>adb shell getprop ro.hardware
+mt6762
+
+D:\platform-tools-latest-windows\platform-tools>adb shell getprop ro.board.platform
+mt6765
+
+D:\platform-tools-latest-windows\platform-tools>adb shell getprop ro.product.cpu.abilist
+arm64-v8a,armeabi-v7a,armeabi
+
+D:\platform-tools-latest-windows\platform-tools>adb shell getprop ro.build.version.release
+11
+
+D:\platform-tools-latest-windows\platform-tools>adb shell getprop ro.build.version.sdk
+30
+
+D:\platform-tools-latest-windows\platform-tools>adb shell cat /proc/meminfo
+MemTotal:        3884508 kB
+MemFree:          197692 kB
+MemAvailable:    2429988 kB
+Buffers:           41296 kB
+Cached:          2219496 kB
+SwapCached:        29012 kB
+Active:          1537712 kB
+Inactive:        1281696 kB
+Active(anon):     302124 kB
+Inactive(anon):   279600 kB
+Active(file):    1235588 kB
+Inactive(file):  1002096 kB
+Unevictable:        3260 kB
+Mlocked:            3260 kB
+SwapTotal:       2135524 kB
+SwapFree:        1347400 kB
+Dirty:                 0 kB
+Writeback:             0 kB
+AnonPages:        552444 kB
+Mapped:           913212 kB
+Shmem:             20800 kB
+KReclaimable:      66376 kB
+Slab:             229076 kB
+SReclaimable:      66376 kB
+SUnreclaim:       162700 kB
+KernelStack:       41040 kB
+PageTables:        68912 kB
+NFS_Unstable:          0 kB
+Bounce:                0 kB
+WritebackTmp:          0 kB
+CommitLimit:     4077776 kB
+Committed_AS:   68105976 kB
+VmallocTotal:   263061440 kB
+VmallocUsed:       87608 kB
+VmallocChunk:          0 kB
+Percpu:             6048 kB
+CmaTotal:         278528 kB
+CmaFree:          108504 kB
+
+D:\platform-tools-latest-windows\platform-tools>adb shell df -h /data
+Filesystem            Size  Used Avail Use% Mounted on
+/dev/block/mmcblk0p37  52G  6.6G   45G  13% /data/user/0
