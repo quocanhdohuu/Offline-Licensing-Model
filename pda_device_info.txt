@@ -1,5 +1,7 @@
-D:\platform-tools-latest-windows\platform-tools>adb shell getprop ro.build.version.release
-adb shell getprop ro.build.version.sdk11
+D:\platform-tools-latest-windows\platform-tools>adb devices
+List of devices attached
+MT9055GL2WEXEK03090     device
+
 
 D:\platform-tools-latest-windows\platform-tools>adb shell getprop ro.product.manufacturer
 Newland
@@ -27,44 +29,44 @@ D:\platform-tools-latest-windows\platform-tools>adb shell getprop ro.build.versi
 
 D:\platform-tools-latest-windows\platform-tools>adb shell cat /proc/meminfo
 MemTotal:        3884508 kB
-MemFree:          197692 kB
-MemAvailable:    2429988 kB
-Buffers:           41296 kB
-Cached:          2219496 kB
-SwapCached:        29012 kB
-Active:          1537712 kB
-Inactive:        1281696 kB
-Active(anon):     302124 kB
-Inactive(anon):   279600 kB
-Active(file):    1235588 kB
-Inactive(file):  1002096 kB
-Unevictable:        3260 kB
-Mlocked:            3260 kB
+MemFree:          285332 kB
+MemAvailable:    2251808 kB
+Buffers:          105652 kB
+Cached:          1903768 kB
+SwapCached:        40192 kB
+Active:          1885896 kB
+Inactive:         858404 kB
+Active(anon):     440936 kB
+Inactive(anon):   341272 kB
+Active(file):    1444960 kB
+Inactive(file):   517132 kB
+Unevictable:        9604 kB
+Mlocked:            9604 kB
 SwapTotal:       2135524 kB
-SwapFree:        1347400 kB
-Dirty:                 0 kB
+SwapFree:        1584488 kB
+Dirty:                 4 kB
 Writeback:             0 kB
-AnonPages:        552444 kB
-Mapped:           913212 kB
-Shmem:             20800 kB
-KReclaimable:      66376 kB
-Slab:             229076 kB
-SReclaimable:      66376 kB
-SUnreclaim:       162700 kB
-KernelStack:       41040 kB
-PageTables:        68912 kB
+AnonPages:        734636 kB
+Mapped:           978800 kB
+Shmem:             38484 kB
+KReclaimable:      76148 kB
+Slab:             251144 kB
+SReclaimable:      76148 kB
+SUnreclaim:       174996 kB
+KernelStack:       44804 kB
+PageTables:        94504 kB
 NFS_Unstable:          0 kB
 Bounce:                0 kB
 WritebackTmp:          0 kB
 CommitLimit:     4077776 kB
-Committed_AS:   68105976 kB
+Committed_AS:   106211332 kB
 VmallocTotal:   263061440 kB
-VmallocUsed:       87608 kB
+VmallocUsed:       91800 kB
 VmallocChunk:          0 kB
-Percpu:             6048 kB
+Percpu:             6144 kB
 CmaTotal:         278528 kB
-CmaFree:          108504 kB
+CmaFree:           16272 kB
 
 D:\platform-tools-latest-windows\platform-tools>adb shell df -h /data
 Filesystem            Size  Used Avail Use% Mounted on
-/dev/block/mmcblk0p37  52G  6.6G   45G  13% /data/user/0
+/dev/block/mmcblk0p37  52G  1.3G   51G   3% /data/user/0

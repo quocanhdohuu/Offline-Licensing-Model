@@ -3,25 +3,237 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="#F0F4F8"
     tools:context=".MainActivity">
 
-    <!-- ScrollView chỉ được phép có 1 con trực tiếp, nên ta dùng LinearLayout để bọc các View khác -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="16dp">
 
+        <!-- Header -->
         <TextView
-            android:id="@+id/sample_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Hello World!"
-            android:textSize="24sp"
-            android:gravity="left"
-            android:padding="10dp" />
+            android:text="Offline Licensing Model (OLM)"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="#1A202C"
+            android:gravity="center"
+            android:paddingBottom="2dp" />
 
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Tân Hưng Hà - Quản lý Bản Quyền Ngoại Tuyến"
+            android:textSize="12sp"
+            android:textColor="#718096"
+            android:gravity="center"
+            android:paddingBottom="16dp" />
 
+        <!-- Card 1: Device Fingerprint -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#FFFFFF"
+            android:padding="16dp"
+            android:elevation="2dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="MÃ VÂN TAY THIẾT BỊ (DEVICE FINGERPRINT)"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="#4A5568" />
+
+            <TextView
+                android:id="@+id/tv_df_code"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="---- - ---- - ---- - ----"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="#2B6CB0"
+                android:gravity="center"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp"
+                android:fontFamily="monospace" />
+
+            <Button
+                android:id="@+id/btn_copy_df"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Sao Chép Mã DF"
+                android:textAllCaps="false"
+                android:textSize="13sp" />
+
+        </LinearLayout>
+
+        <View android:layout_width="match_parent" android:layout_height="12dp" />
+
+        <!-- Card 2: Trạng Thái Bản Quyền Hiện Tại -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#FFFFFF"
+            android:padding="16dp"
+            android:elevation="2dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="TRẠNG THÁI BẢN QUYỀN (LICENSE STATUS)"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="#4A5568" />
+
+            <TextView
+                android:id="@+id/tv_license_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="CHƯA KÍCH HOẠT"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="#C53030"
+                android:gravity="center"
+                android:paddingTop="8dp"
+                android:paddingBottom="6dp" />
+
+            <TextView
+                android:id="@+id/tv_license_details"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Chưa có license nào được kích hoạt trên máy."
+                android:textSize="12sp"
+                android:textColor="#2D3748"
+                android:paddingBottom="4dp" />
+
+        </LinearLayout>
+
+        <View android:layout_width="match_parent" android:layout_height="12dp" />
+
+        <!-- Card 3: Nhập & Kích Hoạt License -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#FFFFFF"
+            android:padding="16dp"
+            android:elevation="2dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="KÍCH HOẠT BẢN QUYỀN"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="#4A5568"
+                android:paddingBottom="6dp" />
+
+            <EditText
+                android:id="@+id/edt_license_token"
+                android:layout_width="match_parent"
+                android:layout_height="90dp"
+                android:hint="Dán chuỗi Token JWT hoặc nạp file .lic tại đây..."
+                android:textSize="11sp"
+                android:gravity="top|start"
+                android:background="#EDF2F7"
+                android:padding="8dp"
+                android:fontFamily="monospace"
+                android:inputType="textMultiLine" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingTop="8dp">
+
+                <Button
+                    android:id="@+id/btn_activate"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Kích Hoạt"
+                    android:textAllCaps="false"
+                    android:textSize="13sp" />
+
+                <View android:layout_width="8dp" android:layout_height="match_parent" />
+
+                <Button
+                    android:id="@+id/btn_load_demo"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Nạp Mẫu Demo"
+                    android:textAllCaps="false"
+                    android:textSize="13sp" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingTop="4dp">
+
+                <Button
+                    android:id="@+id/btn_reverify"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Kiểm Tra Lại"
+                    android:textAllCaps="false"
+                    android:textSize="12sp" />
+
+                <View android:layout_width="8dp" android:layout_height="match_parent" />
+
+                <Button
+                    android:id="@+id/btn_reset_license"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Xóa Bản Quyền"
+                    android:textAllCaps="false"
+                    android:textSize="12sp" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <View android:layout_width="match_parent" android:layout_height="12dp" />
+
+        <!-- Card 4: Chẩn đoán Phần Cứng & Canonical -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#FFFFFF"
+            android:padding="16dp"
+            android:elevation="2dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="THÔNG SỐ PHẦN CỨNG VÀ CANONICAL DEBUG"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="#4A5568"
+                android:paddingBottom="8dp" />
+
+            <TextView
+                android:id="@+id/sample_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Đang tải dữ liệu thiết bị..."
+                android:textSize="11sp"
+                android:textColor="#2D3748"
+                android:fontFamily="monospace" />
+
+        </LinearLayout>
 
     </LinearLayout>
 

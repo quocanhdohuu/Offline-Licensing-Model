@@ -1,22 +1,29 @@
 package com.example.offlinelicensingmodel
 
-import android.os.Build
-import androidx.appcompat.app.AppCompatActivity
-import android.os.Bundle
-import android.widget.TextView
-import com.example.offlinelicensingmodel.databinding.ActivityMainBinding
-import android.app.ActivityManager
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
-import android.hardware.SensorManager
-import android.os.StatFs
-import android.util.DisplayMetrics
-import android.media.MediaDrm
-import java.util.UUID
-import java.security.MessageDigest
+import android.graphics.Color
+import android.os.Bundle
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import com.example.offlinelicensingmodel.databinding.ActivityMainBinding
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
+    private lateinit var validator: LicenseValidator
+    private lateinit var storage: LicenseStorage
+
+    companion object {
+        // Token mẫu demo cho thiết bị Newland MT90 vật lý (DF: MN73-006Q-5G96-S3E8)
+        private const val DEMO_TOKEN_MT90 =
+            "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJUYW5IdW5nSGEtT0xNIiwic3ViIjoiUERBLUxpY2Vuc2UiLCJkZiI6Ik1ONzMtMDA2US01Rzk2LVMzRTgiLCJ0eXBlIjoiUFJPIiwiaWF0IjoxNzkzNzYyNjc1LCJleHAiOjE4MjUyOTg2NzUsImZlYXR1cmVzIjpbIlNDQU5ORVIiLCJJTlZFTlRPUlkiLCJESVJFQ1RfUFJJTlQiXSwibWV0YSI6eyJjdXN0b21lciI6IlRcdTAwZTJuIEhcdTAxYjBuZyBIXHUwMGUwIC0gS2hcdTAwZTFjaCBIXHUwMGUwbmcgVGhcdTFlYWR0IiwibW9kZWwiOiJOTFMtTVQ5MCIsImlzc3VlZF9hdF91dGMiOiIyMDI2LTExLTA0IDAzOjI0OjM1IFVUQyIsImV4cGlyZXNfYXRfdXRjIjoiMjAyNy0xMS0wNCAwMzoyNDozNSBVVEMifX0.4uaCFEUgMUsbxgj60YWAg91spjrl3C53OpL0fk0RvqN5eS0QN87Q7fprkapwo6e9xoND6iuA_Px-hdZcxk6rDw"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -24,123 +31,156 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        binding.sampleText.text = collectDeviceInfo()
+        validator = LicenseValidator(this)
+        storage = LicenseStorage(this)
+
+        initViews()
+        loadDeviceFingerprint()
+        
+        val testTokenExtra = intent.getStringExtra("ACTIVATE_TOKEN")
+        if (!testTokenExtra.isNullOrEmpty()) {
+            val res = validator.validateAndActivate(testTokenExtra)
+            displayValidationResult(res)
+            android.util.Log.d("OLM_DF", "INTENT_ACTIVATION_RESULT: ${res.status} - ${res.message}")
+        } else {
+            refreshLicenseStatus()
+        }
     }
 
-    private fun collectDeviceInfo(): String {
-
-        val info = StringBuilder()
-
-        // 1. Thong tin Build
-        info.append("MANUFACTURER: ${Build.MANUFACTURER}\n")
-        info.append("MODEL: ${Build.MODEL}\n")
-        info.append("FINGERPRINT: ${Build.FINGERPRINT}\n")
-        info.append("BOARD: ${Build.BOARD}\n")
-        info.append("HARDWARE: ${Build.HARDWARE}\n")
-        info.append("CPU ABI: ${Build.SUPPORTED_ABIS.joinToString()}\n")
-        info.append("ANDROID: ${Build.VERSION.RELEASE}\n")
-
-        // 2. Thong tin man hinh
-        val metrics = DisplayMetrics()
-        @Suppress("DEPRECATION")
-        windowManager.defaultDisplay.getRealMetrics(metrics)
-
-        info.append("\n--- DISPLAY ---\n")
-        info.append("WIDTH: ${metrics.widthPixels}\n")
-        info.append("HEIGHT: ${metrics.heightPixels}\n")
-        info.append("DPI: ${metrics.densityDpi}\n")
-
-        // 3. RAM
-        val activityManager =
-            getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-
-        val memoryInfo = ActivityManager.MemoryInfo()
-        activityManager.getMemoryInfo(memoryInfo)
-
-        val totalRam = memoryInfo.totalMem / (1024 * 1024)
-
-        info.append("\n--- MEMORY ---\n")
-        info.append("TOTAL RAM: ${totalRam} MB\n")
-
-        // 4. Storage
-        val statFs = StatFs(filesDir.path)
-
-        val totalStorage =
-            statFs.totalBytes / (1024.0 * 1024 * 1024)
-
-        info.append("TOTAL STORAGE: %.2f GB\n".format(totalStorage))
-
-        // 5. Sensors
-        val sensorManager =
-            getSystemService(Context.SENSOR_SERVICE) as SensorManager
-
-        val sensors = sensorManager.getSensorList(
-            android.hardware.Sensor.TYPE_ALL
-        )
-
-        info.append("\n--- SENSORS ---\n")
-        info.append("SENSOR COUNT: ${sensors.size}\n")
-
-        sensors.forEach {
-            info.append("- ${it.name}\n")
-        }
-        info.append("\n--- MEDIA DRM ---\n")
-        info.append("DEVICE ID: ${getMediaDrmId()}\n")
-
-        val testSalt = "OLM_TEST_SALT_2026"
-
-        val df = createDeviceFingerprint(
-            deviceInfo = info.toString(),
-            salt = testSalt
-        )
-
-        info.append("\n--- DEVICE FINGERPRINT ---\n")
-        info.append("DF: $df\n")
-        info.append("DF LENGTH: ${df.length}\n")
-        return info.toString()
-    }
-    private fun getMediaDrmId(): String {
-
-        // UUID cua Widevine DRM
-        val widevineUuid = UUID.fromString(
-            "edef8ba9-79d6-4ace-a3c8-27dcd51d21ed"
-        )
-
-        if (!MediaDrm.isCryptoSchemeSupported(widevineUuid)) {
-            return "WIDEVINE NOT SUPPORTED"
+    private fun initViews() {
+        // 1. Nút sao chép mã DF
+        binding.btnCopyDf.setOnClickListener {
+            val df = binding.tvDfCode.text.toString()
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            val clip = ClipData.newPlainText("Device Fingerprint", df)
+            clipboard.setPrimaryClip(clip)
+            Toast.makeText(this, "Đã sao chép mã DF: $df", Toast.LENGTH_SHORT).show()
         }
 
-        var drm: MediaDrm? = null
-
-        return try {
-            drm = MediaDrm(widevineUuid)
-
-            val deviceId = drm.getPropertyByteArray(
-                MediaDrm.PROPERTY_DEVICE_UNIQUE_ID
-            )
-
-            deviceId.joinToString("") {
-                "%02X".format(it.toInt() and 0xFF)
+        // 2. Nút kích hoạt bản quyền
+        binding.btnActivate.setOnClickListener {
+            val token = binding.edtLicenseToken.text.toString().trim()
+            if (token.isEmpty()) {
+                Toast.makeText(this, "Vui lòng nhập hoặc dán chuỗi License Token!", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
             }
 
-        } catch (e: Exception) {
-            "ERROR: ${e.javaClass.simpleName}: ${e.message}"
-        } finally {
-            drm?.release()
+            val result = validator.validateAndActivate(token)
+            displayValidationResult(result)
+        }
+
+        // 3. Nút nạp chuỗi Token Demo
+        binding.btnLoadDemo.setOnClickListener {
+            binding.edtLicenseToken.setText(DEMO_TOKEN_MT90)
+            Toast.makeText(this, "Đã nạp chuỗi Token mẫu MT90 vào ô nhập!", Toast.LENGTH_SHORT).show()
+        }
+
+        // 4. Nút kiểm tra lại trạng thái bản quyền
+        binding.btnReverify.setOnClickListener {
+            refreshLicenseStatus()
+            Toast.makeText(this, "Đã cập nhật kiểm tra bản quyền!", Toast.LENGTH_SHORT).show()
+        }
+
+        // 5. Nút xóa bản quyền (Reset)
+        binding.btnResetLicense.setOnClickListener {
+            storage.clearLicense()
+            binding.edtLicenseToken.setText("")
+            refreshLicenseStatus()
+            Toast.makeText(this, "Đã xóa bản quyền lưu trên máy!", Toast.LENGTH_SHORT).show()
         }
     }
-    private fun createDeviceFingerprint(
-        deviceInfo: String,
-        salt: String
-    ): String {
 
-        val input = "$deviceInfo|$salt"
+    private fun loadDeviceFingerprint() {
+        val details = DeviceFingerprintManager.getDeviceDetails(this)
+        android.util.Log.d("OLM_DF", "ACTUAL_PDA_DF: ${details.dfCode}")
+        binding.tvDfCode.text = details.dfCode
 
-        val digest = MessageDigest.getInstance("SHA-256")
-        val hash = digest.digest(input.toByteArray(Charsets.UTF_8))
+        val sb = StringBuilder()
+        sb.append("=== THÔNG SỐ PHẦN CỨNG CHUẨN HÓA ===\n")
+        sb.append("MÃ DF (16 chars): ${details.dfCode}\n")
+        sb.append("DRM UNIQUE ID   : ${details.drmId}\n")
+        sb.append("HÃNG SẢN XUẤT   : ${details.manufacturer}\n")
+        sb.append("MODEL MÁY       : ${details.model}\n")
+        sb.append("BO MẠCH (BOARD) : ${details.board}\n")
+        sb.append("CHIP (HARDWARE) : ${details.hardware}\n")
+        sb.append("CPU ABIs        : ${details.supportedAbis}\n")
+        sb.append("MÀN HÌNH CHUẨN  : ${details.displayResolution}\n")
+        sb.append("RAM ĐỊNH DANH   : ${details.totalRamGb} GB (Thực tế: ${details.actualRamMb} MB)\n")
+        sb.append("SỐ CẢM BIẾN     : ${details.sensorCount} sensors\n")
+        sb.append("HASH CẢM BIẾN   : ${details.sensorHash.take(16)}...\n")
 
-        return hash.joinToString("") {
-            "%02X".format(it.toInt() and 0xFF)
+        sb.append("\n=== THÔNG TIN CHẨN ĐOÁN (KHÔNG ĐƯA VÀO HASH DF) ===\n")
+        sb.append("BUILD ROM       : ${details.buildFingerprint}\n")
+        sb.append("BỘ NHỚ LƯU TRỮ  : %.2f GB\n".format(details.storageGb))
+
+        sb.append("\n=== CANONICAL STRING TRƯỚC KHI BĂM ===\n")
+        sb.append("${details.canonicalString}\n")
+
+        sb.append("\n=== SHA-256 HASH (256-BIT) ===\n")
+        sb.append("${details.fullSha256Hex}\n")
+
+        binding.sampleText.text = sb.toString()
+    }
+
+    private fun refreshLicenseStatus() {
+        val result = validator.validateSavedLicense()
+        android.util.Log.d("OLM_DF", "SAVED_LICENSE_STATUS: ${result.status} - ${result.message}")
+        displayValidationResult(result)
+    }
+
+    private fun displayValidationResult(result: LicenseValidator.ValidationResult) {
+        when (result.status) {
+            LicenseValidator.LicenseStatus.VALID -> {
+                val p = result.payload!!
+                binding.tvLicenseStatus.text = "HỢP LỆ (GÓI ${p.type})"
+                binding.tvLicenseStatus.setTextColor(Color.parseColor("#2E7D32")) // Green
+
+                val details = StringBuilder()
+                details.append("Trạng thái: Hoạt động bình thường\n")
+                details.append("Khách hàng: ${p.customer}\n")
+                details.append("Model chỉ định: ${p.model}\n")
+                details.append("Mã DF kích hoạt: ${p.df}\n")
+                details.append("Ngày cấp: ${formatEpoch(p.iat)}\n")
+                details.append("Hạn sử dụng: ${formatEpoch(p.exp)}\n")
+                details.append("Tính năng mở: ${p.features.joinToString(", ")}")
+                binding.tvLicenseDetails.text = details.toString()
+            }
+            LicenseValidator.LicenseStatus.DEVICE_MISMATCH -> {
+                binding.tvLicenseStatus.text = "SAI THIẾT BỊ (DEVICE MISMATCH)"
+                binding.tvLicenseStatus.setTextColor(Color.parseColor("#E65100")) // Orange
+                binding.tvLicenseDetails.text = result.message
+            }
+            LicenseValidator.LicenseStatus.INVALID_SIGNATURE -> {
+                binding.tvLicenseStatus.text = "CHỮ KÝ KHÔNG HỢP LỆ / FAKE"
+                binding.tvLicenseStatus.setTextColor(Color.parseColor("#C53030")) // Red
+                binding.tvLicenseDetails.text = result.message
+            }
+            LicenseValidator.LicenseStatus.EXPIRED -> {
+                binding.tvLicenseStatus.text = "BẢN QUYỀN ĐÃ HẾT HẠN"
+                binding.tvLicenseStatus.setTextColor(Color.parseColor("#C53030")) // Red
+                binding.tvLicenseDetails.text = result.message
+            }
+            LicenseValidator.LicenseStatus.CLOCK_ROLLBACK_DETECTED -> {
+                binding.tvLicenseStatus.text = "GIAN LẬN LÙI ĐỒNG HỒ!"
+                binding.tvLicenseStatus.setTextColor(Color.parseColor("#B71C1C")) // Dark Red
+                binding.tvLicenseDetails.text = result.message
+            }
+            LicenseValidator.LicenseStatus.NOT_YET_VALID -> {
+                binding.tvLicenseStatus.text = "CHƯA ĐẾN NGÀY HIỆU LỰC"
+                binding.tvLicenseStatus.setTextColor(Color.parseColor("#E65100"))
+                binding.tvLicenseDetails.text = result.message
+            }
+            LicenseValidator.LicenseStatus.INVALID_FORMAT -> {
+                binding.tvLicenseStatus.text = "CHƯA KÍCH HOẠT"
+                binding.tvLicenseStatus.setTextColor(Color.parseColor("#718096")) // Gray
+                binding.tvLicenseDetails.text = result.message
+            }
         }
+    }
+
+    private fun formatEpoch(epochSec: Long): String {
+        val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault())
+        sdf.timeZone = TimeZone.getDefault()
+        return sdf.format(Date(epochSec * 1000))
     }
 }
