@@ -1,5 +1,6 @@
 #include <jni.h>
 #include <string>
+#include <unistd.h>
 #include <android/log.h>
 #include "public_key.h"
 #include "ed25519.h"
@@ -81,6 +82,41 @@ Java_com_example_offlinelicensingmodel_LicenseValidator_verifyNativeSignature(
         LOGE("verifyNativeSignature: Ed25519 Signature INVALID");
         return -1; // INVALID_SIGNATURE
     }
+}
+
+/**
+ * Kiểm tra các dấu hiệu Root bằng hàm hệ thống cấp thấp (Low-level Native C).
+ * Chống các kỹ thuật bypass / Hooking ở tầng Java.
+ *
+ * @return 1 nếu phát hiện nhị phân su, 0 nếu thiết bị an toàn.
+ */
+JNIEXPORT jint JNICALL
+Java_com_example_offlinelicensingmodel_RootChecker_checkNativeRoot(
+        JNIEnv* /* env */,
+        jobject /* thiz */) {
+
+    const char* su_paths[] = {
+            "/system/bin/su",
+            "/system/xbin/su",
+            "/sbin/su",
+            "/vendor/bin/su",
+            "/data/local/su",
+            "/data/local/bin/su",
+            "/data/local/xbin/su",
+            "/system/sd/xbin/su",
+            "/su/bin/su",
+            "/system/bin/.ext/.su",
+            nullptr
+    };
+
+    for (int i = 0; su_paths[i] != nullptr; ++i) {
+        if (access(su_paths[i], F_OK) == 0) {
+            LOGE("checkNativeRoot: DETECTED SU AT %s", su_paths[i]);
+            return 1; // Phát hiện Root
+        }
+    }
+
+    return 0; // An toàn
 }
 
 } // extern "C"

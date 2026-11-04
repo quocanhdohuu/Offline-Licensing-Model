@@ -43,7 +43,8 @@ class LicenseValidator(private val context: Context) {
         DEVICE_MISMATCH,
         EXPIRED,
         NOT_YET_VALID,
-        CLOCK_ROLLBACK_DETECTED
+        CLOCK_ROLLBACK_DETECTED,
+        ROOT_DEVICE_DETECTED
     }
 
     data class LicensePayload(
@@ -65,6 +66,7 @@ class LicenseValidator(private val context: Context) {
     )
 
     private val storage = LicenseStorage(context)
+    private val rootChecker = RootChecker(context)
 
     /**
      * Xác thực toàn diện một chuỗi Token JWT.
@@ -83,6 +85,15 @@ class LicenseValidator(private val context: Context) {
      * Xác thực Token đang lưu trong bộ nhớ (dùng khi khởi động app hoặc kiểm tra định kỳ).
      */
     fun validateSavedLicense(): ValidationResult {
+        // Kiểm tra Root ngay cả với License đã lưu
+        val rootStatus = rootChecker.checkRoot()
+        if (rootStatus.isRooted) {
+            return ValidationResult(
+                status = LicenseStatus.ROOT_DEVICE_DETECTED,
+                message = "CẢNH BÁO BẢO MẬT: ${rootStatus.details} Hệ thống khóa bản quyền trên thiết bị Root!"
+            )
+        }
+
         val savedToken = storage.getSavedLicense()
             ?: return ValidationResult(
                 status = LicenseStatus.INVALID_FORMAT,
@@ -95,6 +106,17 @@ class LicenseValidator(private val context: Context) {
      * Hàm kiểm tra 4 lớp phòng thủ cho chuỗi JWT token.
      */
     fun validateToken(jwtToken: String): ValidationResult {
+        // ==============================================================
+        // LỚP 0: KIỂM TRA MÔI TRƯỜNG THIẾT BỊ (ROOT CHECKER)
+        // ==============================================================
+        val rootStatus = rootChecker.checkRoot()
+        if (rootStatus.isRooted) {
+            return ValidationResult(
+                status = LicenseStatus.ROOT_DEVICE_DETECTED,
+                message = "TỪ CHỐI BẢN QUYỀN: ${rootStatus.details} Không hỗ trợ thiết bị đã Root!"
+            )
+        }
+
         val parts = jwtToken.trim().split(".")
         if (parts.size != 3) {
             return ValidationResult(

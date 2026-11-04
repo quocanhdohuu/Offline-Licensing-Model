@@ -30,7 +30,21 @@
             android:textSize="12sp"
             android:textColor="#718096"
             android:gravity="center"
-            android:paddingBottom="16dp" />
+            android:paddingBottom="12dp" />
+
+        <!-- Security Badge: Root Checker Status -->
+        <TextView
+            android:id="@+id/tv_root_security_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="BẢO MẬT HỆ THỐNG: ĐANG KIỂM TRA..."
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="#2E7D32"
+            android:background="#E8F5E9"
+            android:padding="8dp"
+            android:gravity="center"
+            android:layout_marginBottom="12dp" />
 
         <!-- Card 1: Device Fingerprint -->
         <LinearLayout
@@ -116,7 +130,7 @@
 
         <View android:layout_width="match_parent" android:layout_height="12dp" />
 
-        <!-- Card 3: Nhập & Kích Hoạt License -->
+        <!-- Card 3: Nhập & Kích Hoạt License + Hardware Scanner -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -128,17 +142,37 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="KÍCH HOẠT BẢN QUYỀN"
+                android:text="KÍCH HOẠT BẢN QUYỀN (MẮT QUÉT PHẦN CỨNG MT90)"
                 android:textSize="11sp"
                 android:textStyle="bold"
                 android:textColor="#4A5568"
                 android:paddingBottom="6dp" />
 
+            <!-- Nút bật tia laser quét mã phần cứng -->
+            <Button
+                android:id="@+id/btn_trigger_laser"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Bật Tia Quét Laser"
+                android:textAllCaps="false"
+                android:textSize="13sp"
+                android:backgroundTint="#2B6CB0"
+                android:textColor="#FFFFFF" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="* Hướng đầu đọc vào mã QR License rồi bấm nút trên hoặc phím vàng."
+                android:textSize="11sp"
+                android:textColor="#718096"
+                android:paddingTop="4dp"
+                android:paddingBottom="8dp" />
+
             <EditText
                 android:id="@+id/edt_license_token"
                 android:layout_width="match_parent"
-                android:layout_height="90dp"
-                android:hint="Dán chuỗi Token JWT hoặc nạp file .lic tại đây..."
+                android:layout_height="80dp"
+                android:hint="Chuỗi Token từ mắt đọc quét được sẽ tự điền vào đây..."
                 android:textSize="11sp"
                 android:gravity="top|start"
                 android:background="#EDF2F7"
@@ -157,9 +191,9 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Kích Hoạt"
+                    android:text="Kích Hoạt Thủ Công"
                     android:textAllCaps="false"
-                    android:textSize="13sp" />
+                    android:textSize="12sp" />
 
                 <View android:layout_width="8dp" android:layout_height="match_parent" />
 
@@ -170,7 +204,7 @@
                     android:layout_weight="1"
                     android:text="Nạp Mẫu Demo"
                     android:textAllCaps="false"
-                    android:textSize="13sp" />
+                    android:textSize="12sp" />
 
             </LinearLayout>
 

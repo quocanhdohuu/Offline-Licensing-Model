@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Color
 import android.os.Bundle
+import android.view.inputmethod.EditorInfo
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.offlinelicensingmodel.databinding.ActivityMainBinding
@@ -18,6 +19,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var validator: LicenseValidator
     private lateinit var storage: LicenseStorage
+    private lateinit var rootChecker: RootChecker
+    private lateinit var hardwareScanner: HardwareScannerManager
 
     companion object {
         // Token mẫu demo cho thiết bị Newland MT90 vật lý (DF: MN73-006Q-5G96-S3E8)
@@ -33,10 +36,22 @@ class MainActivity : AppCompatActivity() {
 
         validator = LicenseValidator(this)
         storage = LicenseStorage(this)
+        rootChecker = RootChecker(this)
+
+        // Khởi tạo bộ thu phát đầu đọc quét mã phần cứng Newland MT90
+        hardwareScanner = HardwareScannerManager(this) { barcode ->
+            runOnUiThread {
+                binding.edtLicenseToken.setText(barcode)
+                val res = validator.validateAndActivate(barcode)
+                displayValidationResult(res)
+                Toast.makeText(this, "Đầu đọc MT90: ${res.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
 
         initViews()
         loadDeviceFingerprint()
-        
+        checkAndDisplayRootStatus()
+
         val testTokenExtra = intent.getStringExtra("ACTIVATE_TOKEN")
         if (!testTokenExtra.isNullOrEmpty()) {
             val res = validator.validateAndActivate(testTokenExtra)
@@ -44,6 +59,30 @@ class MainActivity : AppCompatActivity() {
             android.util.Log.d("OLM_DF", "INTENT_ACTIVATION_RESULT: ${res.status} - ${res.message}")
         } else {
             refreshLicenseStatus()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        hardwareScanner.startListening()
+        checkAndDisplayRootStatus()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        hardwareScanner.stopListening()
+    }
+
+    private fun checkAndDisplayRootStatus() {
+        val rootStatus = rootChecker.checkRoot()
+        if (rootStatus.isRooted) {
+            binding.tvRootSecurityStatus.text = "BẢO MẬT: CẢNH BÁO MÁY ĐÃ ROOT! (${rootStatus.details})"
+            binding.tvRootSecurityStatus.setTextColor(Color.parseColor("#B71C1C"))
+            binding.tvRootSecurityStatus.setBackgroundColor(Color.parseColor("#FFEBEE"))
+        } else {
+            binding.tvRootSecurityStatus.text = "BẢO MẬT HỆ THỐNG: THIẾT BỊ AN TOÀN (NON-ROOT)"
+            binding.tvRootSecurityStatus.setTextColor(Color.parseColor("#2E7D32"))
+            binding.tvRootSecurityStatus.setBackgroundColor(Color.parseColor("#E8F5E9"))
         }
     }
 
@@ -57,7 +96,13 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "Đã sao chép mã DF: $df", Toast.LENGTH_SHORT).show()
         }
 
-        // 2. Nút kích hoạt bản quyền
+        // 2. Nút kích hoạt tia laser quét mã vạch phần cứng
+        binding.btnTriggerLaser.setOnClickListener {
+            hardwareScanner.triggerHardwareScan()
+            Toast.makeText(this, "Đang chiếu tia laser quét mã...", Toast.LENGTH_SHORT).show()
+        }
+
+        // 3. Nút kích hoạt bản quyền thủ công
         binding.btnActivate.setOnClickListener {
             val token = binding.edtLicenseToken.text.toString().trim()
             if (token.isEmpty()) {
@@ -69,19 +114,34 @@ class MainActivity : AppCompatActivity() {
             displayValidationResult(result)
         }
 
-        // 3. Nút nạp chuỗi Token Demo
+        // Xử lý tự kích hoạt khi đầu đọc ở chế độ bàn phím ảo (Keystroke Emulation)
+        binding.edtLicenseToken.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE || actionId == EditorInfo.IME_NULL) {
+                val token = binding.edtLicenseToken.text.toString().trim()
+                if (token.isNotEmpty()) {
+                    val result = validator.validateAndActivate(token)
+                    displayValidationResult(result)
+                }
+                true
+            } else {
+                false
+            }
+        }
+
+        // 4. Nút nạp chuỗi Token Demo
         binding.btnLoadDemo.setOnClickListener {
             binding.edtLicenseToken.setText(DEMO_TOKEN_MT90)
             Toast.makeText(this, "Đã nạp chuỗi Token mẫu MT90 vào ô nhập!", Toast.LENGTH_SHORT).show()
         }
 
-        // 4. Nút kiểm tra lại trạng thái bản quyền
+        // 5. Nút kiểm tra lại trạng thái bản quyền
         binding.btnReverify.setOnClickListener {
             refreshLicenseStatus()
+            checkAndDisplayRootStatus()
             Toast.makeText(this, "Đã cập nhật kiểm tra bản quyền!", Toast.LENGTH_SHORT).show()
         }
 
-        // 5. Nút xóa bản quyền (Reset)
+        // 6. Nút xóa bản quyền (Reset)
         binding.btnResetLicense.setOnClickListener {
             storage.clearLicense()
             binding.edtLicenseToken.setText("")
@@ -144,6 +204,11 @@ class MainActivity : AppCompatActivity() {
                 details.append("Hạn sử dụng: ${formatEpoch(p.exp)}\n")
                 details.append("Tính năng mở: ${p.features.joinToString(", ")}")
                 binding.tvLicenseDetails.text = details.toString()
+            }
+            LicenseValidator.LicenseStatus.ROOT_DEVICE_DETECTED -> {
+                binding.tvLicenseStatus.text = "TỪ CHỐI: MÁY ĐÃ ROOT"
+                binding.tvLicenseStatus.setTextColor(Color.parseColor("#B71C1C"))
+                binding.tvLicenseDetails.text = result.message
             }
             LicenseValidator.LicenseStatus.DEVICE_MISMATCH -> {
                 binding.tvLicenseStatus.text = "SAI THIẾT BỊ (DEVICE MISMATCH)"
