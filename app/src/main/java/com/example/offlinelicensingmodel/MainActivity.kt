@@ -23,9 +23,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var hardwareScanner: HardwareScannerManager
 
     companion object {
-        // Token mẫu demo cho thiết bị Newland MT90 vật lý (DF: MN73-006Q-5G96-S3E8)
+        // Token mẫu demo cho thiết bị Newland MT90 vật lý (DF chuẩn kháng Factory Reset: 8ZRB-JNNA-TXYP-K7V9)
         private const val DEMO_TOKEN_MT90 =
-            "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJUYW5IdW5nSGEtT0xNIiwic3ViIjoiUERBLUxpY2Vuc2UiLCJkZiI6Ik1ONzMtMDA2US01Rzk2LVMzRTgiLCJ0eXBlIjoiUFJPIiwiaWF0IjoxNzkzNzYyNjc1LCJleHAiOjE4MjUyOTg2NzUsImZlYXR1cmVzIjpbIlNDQU5ORVIiLCJJTlZFTlRPUlkiLCJESVJFQ1RfUFJJTlQiXSwibWV0YSI6eyJjdXN0b21lciI6IlRcdTAwZTJuIEhcdTAxYjBuZyBIXHUwMGUwIC0gS2hcdTAwZTFjaCBIXHUwMGUwbmcgVGhcdTFlYWR0IiwibW9kZWwiOiJOTFMtTVQ5MCIsImlzc3VlZF9hdF91dGMiOiIyMDI2LTExLTA0IDAzOjI0OjM1IFVUQyIsImV4cGlyZXNfYXRfdXRjIjoiMjAyNy0xMS0wNCAwMzoyNDozNSBVVEMifX0.4uaCFEUgMUsbxgj60YWAg91spjrl3C53OpL0fk0RvqN5eS0QN87Q7fprkapwo6e9xoND6iuA_Px-hdZcxk6rDw"
+            "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJUYW5IdW5nSGEtT0xNIiwic3ViIjoiUERBLUxpY2Vuc2UiLCJkZiI6IjhaUkItSk5OQS1UWFlQLUs3VjkiLCJ0eXBlIjoiUFJPIiwiaWF0IjoxNzkzODQ3MzU1LCJleHAiOjE4MjUzODMzNTUsImZlYXR1cmVzIjpbIlNDQU5ORVIiLCJJTlZFTlRPUlkiLCJESVJFQ1RfUFJJTlQiXSwibWV0YSI6eyJjdXN0b21lciI6IlRhbiBIdW5nIEhhIC0gUmVhbCBNVDkwIChGYWN0b3J5IFJlc2V0IFJlc2lzdGFudCkiLCJtb2RlbCI6Ik5MUy1NVDkwIiwiaXNzdWVkX2F0X3V0YyI6IjIwMjYtMTEtMDUgMDI6NTU6NTUgVVRDIiwiZXhwaXJlc19hdF91dGMiOiIyMDI3LTExLTA1IDAyOjU1OjU1IFVUQyJ9fQ.W7rUwsZHjYGf_CgHxFV74r2IItehUuo0YldOHtzCOOfXQAKpl5V4H3eqpdZUsC3gTXBMdSH-atQKkNB6u7OZCw"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -158,7 +158,7 @@ class MainActivity : AppCompatActivity() {
         val sb = StringBuilder()
         sb.append("=== THÔNG SỐ PHẦN CỨNG CHUẨN HÓA ===\n")
         sb.append("MÃ DF (16 chars): ${details.dfCode}\n")
-        sb.append("DRM UNIQUE ID   : ${details.drmId}\n")
+        sb.append("HARDWARE SERIAL : ${details.serial}\n")
         sb.append("HÃNG SẢN XUẤT   : ${details.manufacturer}\n")
         sb.append("MODEL MÁY       : ${details.model}\n")
         sb.append("BO MẠCH (BOARD) : ${details.board}\n")
@@ -166,10 +166,11 @@ class MainActivity : AppCompatActivity() {
         sb.append("CPU ABIs        : ${details.supportedAbis}\n")
         sb.append("MÀN HÌNH CHUẨN  : ${details.displayResolution}\n")
         sb.append("RAM ĐỊNH DANH   : ${details.totalRamGb} GB (Thực tế: ${details.actualRamMb} MB)\n")
-        sb.append("SỐ CẢM BIẾN     : ${details.sensorCount} sensors\n")
-        sb.append("HASH CẢM BIẾN   : ${details.sensorHash.take(16)}...\n")
 
         sb.append("\n=== THÔNG TIN CHẨN ĐOÁN (KHÔNG ĐƯA VÀO HASH DF) ===\n")
+        sb.append("DRM UNIQUE ID   : ${details.drmId}\n")
+        sb.append("SỐ CẢM BIẾN     : ${details.sensorCount} sensors\n")
+        sb.append("HASH CẢM BIẾN   : ${details.sensorHash.take(16)}...\n")
         sb.append("BUILD ROM       : ${details.buildFingerprint}\n")
         sb.append("BỘ NHỚ LƯU TRỮ  : %.2f GB\n".format(details.storageGb))
 

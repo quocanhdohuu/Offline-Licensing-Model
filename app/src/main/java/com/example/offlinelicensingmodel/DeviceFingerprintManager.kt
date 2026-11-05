@@ -17,9 +17,9 @@ import java.util.UUID
  * Quản lý và chuẩn hóa Device Fingerprint (DF) cho mô hình Offline Licensing Model (OLM).
  *
  * Tuân thủ nguyên tắc Zero Trust:
- * - Tier 1: Hardware DRM UUID (Lõi bất biến).
- * - Tier 2: Thuộc tính phần cứng tĩnh, màn hình chuẩn hóa xoay, RAM làm tròn mốc GB, cảm biến sorted hash.
- * - Tier 3: Loại bỏ Build.FINGERPRINT và dung lượng Storage khỏi hash định danh để kháng lỗi cập nhật OTA.
+ * - Tier 1: Hardware Serial bất biến vật lý (Vendor Property MTK/Newland NVRAM & Kernel Sysfs node).
+ * - Tier 2: Thuộc tính phần cứng tĩnh (Manufacturer, Model, Board, Chipset, ABIs, Physical Pixel Res, RAM chuẩn hóa GB).
+ * - Tier 3: Loại bỏ Widevine L3, Sensor List, Display DPI, Storage, Build.FINGERPRINT khỏi chuỗi băm để kháng 100% Factory Reset và cập nhật OTA.
  * - Đầu ra: Mã 16 ký tự Crockford Base32 (80-bit entropy) định dạng XXXX-XXXX-XXXX-XXXX.
  */
 object DeviceFingerprintManager {
@@ -28,7 +28,8 @@ object DeviceFingerprintManager {
     private const val CROCKFORD_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 
     data class DeviceDetails(
-        val drmId: String,
+        val serial: String,
+        val drmId: String,            // Chỉ dùng chẩn đoán
         val manufacturer: String,
         val model: String,
         val board: String,
@@ -37,10 +38,10 @@ object DeviceFingerprintManager {
         val displayResolution: String,
         val totalRamGb: Int,
         val actualRamMb: Long,
-        val sensorCount: Int,
-        val sensorHash: String,
-        val sensorList: List<String>,
-        val buildFingerprint: String, // Chỉ dùng chẩn đoán, không đưa vào hash DF
+        val sensorCount: Int,         // Chỉ dùng chẩn đoán
+        val sensorHash: String,       // Chỉ dùng chẩn đoán
+        val sensorList: List<String>, // Chỉ dùng chẩn đoán
+        val buildFingerprint: String, // Chỉ dùng chẩn đoán
         val storageGb: Double,        // Chỉ dùng chẩn đoán
         val canonicalString: String,
         val fullSha256Hex: String,
@@ -48,11 +49,11 @@ object DeviceFingerprintManager {
     )
 
     /**
-     * Thu thập thông tin và sinh mã Device Fingerprint chuẩn hóa.
+     * Thu thập thông tin và sinh mã Device Fingerprint chuẩn hóa kháng Factory Reset.
      */
     fun getDeviceDetails(context: Context, salt: String = DEFAULT_SALT): DeviceDetails {
-        // 1. Tier 1 - MediaDrm Widevine UUID
-        val drmId = getMediaDrmId()
+        // 1. Tier 1 - Hardware Serial vật lý bất biến (khắc Laser / NVRAM chip)
+        val serial = getSafeHardwareSerial()
 
         // 2. Tier 2 - Thông số cấu hình phần cứng tĩnh
         val manufacturer = Build.MANUFACTURER.trim().uppercase(Locale.US)
@@ -61,14 +62,15 @@ object DeviceFingerprintManager {
         val hardware = Build.HARDWARE.trim().uppercase(Locale.US)
         val supportedAbis = Build.SUPPORTED_ABIS.joinToString(",").uppercase(Locale.US)
 
-        // Màn hình: chuẩn hóa không phụ thuộc góc xoay (min x max @ dpi)
+        // Màn hình: Chuẩn hóa theo kích thước điểm ảnh vật lý của tấm nền (Physical Pixels)
+        // Loại bỏ densityDpi để kháng mọi thay đổi thu phóng giao diện sau Factory Reset
         val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
         val metrics = DisplayMetrics()
         @Suppress("DEPRECATION")
         wm.defaultDisplay.getRealMetrics(metrics)
         val minDim = kotlin.math.min(metrics.widthPixels, metrics.heightPixels)
         val maxDim = kotlin.math.max(metrics.widthPixels, metrics.heightPixels)
-        val displayResolution = "${minDim}x${maxDim}@${metrics.densityDpi}"
+        val displayResolution = "${minDim}x${maxDim}"
 
         // RAM: Làm tròn lên mức GB gần nhất (MT90 ~ 3.8GB -> 4GB) để tránh lệch khi kernel thay đổi video memory
         val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
@@ -77,19 +79,18 @@ object DeviceFingerprintManager {
         val actualRamMb = memoryInfo.totalMem / (1024 * 1024)
         val totalRamGb = kotlin.math.round(memoryInfo.totalMem.toDouble() / (1024.0 * 1024.0 * 1024.0)).toInt()
 
-        // Cảm biến: Sắp xếp theo tên và băm SHA-256 danh sách để tạo giá trị định danh phần cứng cảm biến
+        // 3. Thông tin chẩn đoán (Diagnostic only - không cho vào hash DF)
+        val drmId = getMediaDrmId()
         val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
         val sensors = sensorManager.getSensorList(Sensor.TYPE_ALL)
         val sensorNames = sensors.map { it.name.trim() }.sorted()
         val sensorHash = sha256Hex(sensorNames.joinToString(","))
-
-        // 3. Thông tin chẩn đoán (Diagnostic only - không cho vào hash DF)
         val buildFingerprint = Build.FINGERPRINT
         val statFs = StatFs(context.filesDir.path)
         val storageGb = statFs.totalBytes / (1024.0 * 1024.0 * 1024.0)
 
-        // 4. Ghép chuỗi chuẩn tắc Canonical String
-        val canonicalString = "DRM=$drmId" +
+        // 4. Ghép chuỗi chuẩn tắc Canonical String (100% phần cứng bất biến)
+        val canonicalString = "SERIAL=$serial" +
                 "|MF=$manufacturer" +
                 "|MD=$model" +
                 "|BOARD=$board" +
@@ -97,7 +98,6 @@ object DeviceFingerprintManager {
                 "|ABI=$supportedAbis" +
                 "|DISP=$displayResolution" +
                 "|RAM=${totalRamGb}GB" +
-                "|SNS=$sensorHash" +
                 "|SALT=$salt"
 
         // 5. Băm SHA-256
@@ -110,6 +110,7 @@ object DeviceFingerprintManager {
         val dfCode = formatDfCode(rawBase32)
 
         return DeviceDetails(
+            serial = serial,
             drmId = drmId,
             manufacturer = manufacturer,
             model = model,
@@ -128,6 +129,54 @@ object DeviceFingerprintManager {
             fullSha256Hex = fullSha256Hex,
             dfCode = dfCode
         )
+    }
+
+    /**
+     * Đọc Hardware Serial vật lý an toàn, tương thích Android 9-14 không gây SecurityException.
+     */
+    fun getSafeHardwareSerial(): String {
+        // Tầng 1: Đọc Vendor Property MediaTek / Newland (chứa số Serial gốc NVRAM)
+        val vendorSerial = getSystemProperty("vendor.gsm.serial")
+        if (!vendorSerial.isNullOrBlank() && vendorSerial != "unknown") {
+            val cleanSerial = vendorSerial.trim().split("\\s+".toRegex())[0]
+            if (cleanSerial.length >= 6) {
+                return cleanSerial.uppercase(Locale.US)
+            }
+        }
+
+        // Tầng 2: Đọc file node Linux Sysfs iSerial
+        try {
+            val iSerial = java.io.File("/sys/class/android_usb/android0/iSerial")
+            if (iSerial.exists() && iSerial.canRead()) {
+                val s = iSerial.readText().trim()
+                if (s.isNotEmpty() && s != "unknown") {
+                    return s.uppercase(Locale.US)
+                }
+            }
+        } catch (_: Exception) { }
+
+        // Tầng 3: Thử đọc ro.boot.serialno hoặc ro.serialno
+        val bootSerial = getSystemProperty("ro.boot.serialno")
+        if (!bootSerial.isNullOrBlank() && bootSerial != "unknown") {
+            return bootSerial.trim().uppercase(Locale.US)
+        }
+
+        val propSerial = getSystemProperty("ro.serialno")
+        if (!propSerial.isNullOrBlank() && propSerial != "unknown") {
+            return propSerial.trim().uppercase(Locale.US)
+        }
+
+        return "GENERIC-MT90-SERIAL"
+    }
+
+    private fun getSystemProperty(key: String): String? {
+        return try {
+            val clazz = Class.forName("android.os.SystemProperties")
+            val getMethod = clazz.getMethod("get", String::class.java)
+            getMethod.invoke(null, key) as? String
+        } catch (e: Exception) {
+            null
+        }
     }
 
     /**
