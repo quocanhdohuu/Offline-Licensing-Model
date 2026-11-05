@@ -1,0 +1,37 @@
+{
+  "CASE_0_VALID": {
+    "token": "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJUYW5IdW5nSGEtT0xNIiwic3ViIjoiUERBLUxpY2Vuc2UiLCJkZiI6IjYxN1QtSzgwNy1YWEE1LVM1R0siLCJ0eXBlIjoiUFJPIiwiaWF0IjoxNzkzODY4Njk1LCJleHAiOjE4MjU0MDQ2OTUsImZlYXR1cmVzIjpbIlNDQU5ORVIiLCJJTlZFTlRPUlkiLCJESVJFQ1RfUFJJTlQiXSwibWV0YSI6eyJjdXN0b21lciI6IlRhbiBIdW5nIEhhIC0gVGVzdCBTdWl0ZSIsIm1vZGVsIjoiTkxTLU1UOTAifX0.yDjrFdQz4e16fmmGAAelafEvjFPdKenxir0h3L1yZlJDxsPDY2RBN5Ne4uW_R6cARQpCOkcipF8IvwB4C6CtDw",
+    "expected": "VALID",
+    "desc": "License hợp lệ 100% được ký bằng Private Key chính thức",
+    "qr_file": "tools\\license_tool\\test_cases_zebra\\CASE_0_VALID_qr.png",
+    "lic_file": "tools\\license_tool\\test_cases_zebra\\CASE_0_VALID.lic"
+  },
+  "CASE_1_TAMPERED_PAYLOAD": {
+    "token": "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJUYW5IdW5nSGEtT0xNIiwic3ViIjoiUERBLUxpY2Vuc2UiLCJkZiI6IjYxN1QtSzgwNy1YWEE1LVM1R0siLCJ0eXBlIjoiRU5URVJQUklTRSIsImlhdCI6MTc5Mzg2ODY5NSwiZXhwIjoyMTA5MjI4Njk1LCJmZWF0dXJlcyI6WyJTQ0FOTkVSIiwiSU5WRU5UT1JZIiwiRElSRUNUX1BSSU5UIl0sIm1ldGEiOnsiY3VzdG9tZXIiOiJUYW4gSHVuZyBIYSAtIFRlc3QgU3VpdGUiLCJtb2RlbCI6Ik5MUy1NVDkwIn19.yDjrFdQz4e16fmmGAAelafEvjFPdKenxir0h3L1yZlJDxsPDY2RBN5Ne4uW_R6cARQpCOkcipF8IvwB4C6CtDw",
+    "expected": "INVALID_SIGNATURE",
+    "desc": "Tấn công sửa đổi dữ liệu payload (sửa hạn và gói) nhưng giữ nguyên chữ ký cũ",
+    "qr_file": "tools\\license_tool\\test_cases_zebra\\CASE_1_TAMPERED_PAYLOAD_qr.png",
+    "lic_file": "tools\\license_tool\\test_cases_zebra\\CASE_1_TAMPERED_PAYLOAD.lic"
+  },
+  "CASE_2_DEVICE_MISMATCH": {
+    "token": "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJUYW5IdW5nSGEtT0xNIiwic3ViIjoiUERBLUxpY2Vuc2UiLCJkZiI6IjlBMkItWDdZOC1BVDZZLTRGMkUiLCJ0eXBlIjoiUFJPIiwiaWF0IjoxNzkzODY4Njk1LCJleHAiOjE4MjU0MDQ2OTUsImZlYXR1cmVzIjpbIlNDQU5ORVIiLCJJTlZFTlRPUlkiLCJESVJFQ1RfUFJJTlQiXSwibWV0YSI6eyJjdXN0b21lciI6IlRhbiBIdW5nIEhhIC0gVGVzdCBTdWl0ZSIsIm1vZGVsIjoiTkxTLU1UOTAifX0.miP68owbQpoiUg6shhXXO1AE2iDRykPTf9sL2ZwT512nqGBMlgRb0EmVDjGANhLIw1wc6L0kXmpEEEcDQ_-ABQ",
+    "expected": "DEVICE_MISMATCH",
+    "desc": "Tấn công clone license của máy khác (9A2B-X7Y8-AT6Y-4F2E) sang máy MT90 này",
+    "qr_file": "tools\\license_tool\\test_cases_zebra\\CASE_2_DEVICE_MISMATCH_qr.png",
+    "lic_file": "tools\\license_tool\\test_cases_zebra\\CASE_2_DEVICE_MISMATCH.lic"
+  },
+  "CASE_3_FAKE_SIGNATURE": {
+    "token": "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJUYW5IdW5nSGEtT0xNIiwic3ViIjoiUERBLUxpY2Vuc2UiLCJkZiI6IjYxN1QtSzgwNy1YWEE1LVM1R0siLCJ0eXBlIjoiUFJPIiwiaWF0IjoxNzkzODY4Njk1LCJleHAiOjE4MjU0MDQ2OTUsImZlYXR1cmVzIjpbIlNDQU5ORVIiLCJJTlZFTlRPUlkiLCJESVJFQ1RfUFJJTlQiXSwibWV0YSI6eyJjdXN0b21lciI6IlRhbiBIdW5nIEhhIC0gVGVzdCBTdWl0ZSIsIm1vZGVsIjoiTkxTLU1UOTAifX0.cPo7o4eCHSUmjXu5zvK2-qG05G1toFFZwA9veuMoKpt2jmitw-2n6-l9GLsHKMRKc0dTgODCEFnszfHUyO1BBw",
+    "expected": "INVALID_SIGNATURE",
+    "desc": "Tấn công tự tạo cặp khóa Ed25519 giả để tự ký license",
+    "qr_file": "tools\\license_tool\\test_cases_zebra\\CASE_3_FAKE_SIGNATURE_qr.png",
+    "lic_file": "tools\\license_tool\\test_cases_zebra\\CASE_3_FAKE_SIGNATURE.lic"
+  },
+  "CASE_4_EXPIRED_LICENSE": {
+    "token": "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJUYW5IdW5nSGEtT0xNIiwic3ViIjoiUERBLUxpY2Vuc2UiLCJkZiI6IjYxN1QtSzgwNy1YWEE1LVM1R0siLCJ0eXBlIjoiUFJPIiwiaWF0IjoxNzU5MzA4Njk1LCJleHAiOjE3OTEyNzY2OTUsImZlYXR1cmVzIjpbIlNDQU5ORVIiLCJJTlZFTlRPUlkiLCJESVJFQ1RfUFJJTlQiXSwibWV0YSI6eyJjdXN0b21lciI6IlRhbiBIdW5nIEhhIC0gVGVzdCBTdWl0ZSIsIm1vZGVsIjoiTkxTLU1UOTAifX0.3LfBxgKMWEGLTjUgdekNCkM98QnMo5fRmBoiS2NPpZ-hNY3wns_-ceckJZR723cBgqF_OkMpOift_WdIqJShCA",
+    "expected": "EXPIRED",
+    "desc": "Tấn công sử dụng license đã hết hạn cách đây 30 ngày",
+    "qr_file": "tools\\license_tool\\test_cases_zebra\\CASE_4_EXPIRED_LICENSE_qr.png",
+    "lic_file": "tools\\license_tool\\test_cases_zebra\\CASE_4_EXPIRED_LICENSE.lic"
+  }
+}
