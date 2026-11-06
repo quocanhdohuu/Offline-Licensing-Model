@@ -194,7 +194,15 @@ object DeviceFingerprintManager {
             }
         }
 
-        // Tầng 6: Cứu cánh thông minh cho điện thoại thương mại (Pixel, Samsung...)
+        // Tầng 6: Phân vùng Doanh nghiệp bất biến (/enterprise/usr/)
+        // Dành riêng cho thiết bị chuyên dụng doanh nghiệp (Zebra, Honeywell...).
+        // Phân vùng /enterprise/ KHÔNG BAO GIỜ bị xóa khi thực hiện Enterprise Reset!
+        val enterpriseSerial = getOrGenerateEnterpriseSerial()
+        if (!enterpriseSerial.isNullOrBlank()) {
+            return enterpriseSerial
+        }
+
+        // Tầng 7: Cứu cánh thông minh cho điện thoại thương mại (Pixel, Samsung...)
         // Dùng MediaDrm Device Unique ID để đảm bảo 2 máy cùng dòng KHÔNG BAO GIỜ bị trùng DF!
         val drmId = getMediaDrmId()
         if (drmId.isNotBlank() && drmId != "FALLBACK-NOWIDEVINE") {
@@ -202,6 +210,68 @@ object DeviceFingerprintManager {
         }
 
         return "GENERIC-PDA-SERIAL"
+    }
+
+    private val ENTERPRISE_PATHS = arrayOf(
+        "/enterprise/usr/persist/olm_device_serial.dat",
+        "/enterprise/usr/olm_device_serial.dat",
+        "/enterprise/device/settings/olm_device_serial.dat"
+    )
+
+    private val ENTERPRISE_DIRS = arrayOf(
+        "/enterprise/usr/persist",
+        "/enterprise/usr",
+        "/enterprise/device/settings"
+    )
+
+    /**
+     * Đọc hoặc khởi tạo Serial bền vững trong phân vùng Doanh nghiệp (/enterprise/).
+     * Kháng 100% Enterprise Reset trên tất cả các dòng Zebra, Honeywell.
+     */
+    private fun getOrGenerateEnterpriseSerial(): String? {
+        // 1. Tìm đọc file serial đã tồn tại trước đó
+        for (path in ENTERPRISE_PATHS) {
+            try {
+                val f = java.io.File(path)
+                if (f.exists() && f.canRead()) {
+                    val content = f.readText().trim()
+                    if (content.length >= 6) {
+                        Log.i("DeviceFingerprint", "Đã đọc Enterprise Serial từ $path: $content")
+                        return content
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w("DeviceFingerprint", "Lỗi đọc Enterprise path $path: ${e.message}")
+            }
+        }
+
+        // 2. Nếu chưa có, khởi tạo token mới và lưu vào phân vùng /enterprise/
+        for (dirPath in ENTERPRISE_DIRS) {
+            try {
+                val dir = java.io.File(dirPath)
+                if (dir.exists() && dir.isDirectory && dir.canWrite()) {
+                    val targetFile = java.io.File(dir, "olm_device_serial.dat")
+                    val modelClean = Build.MODEL.trim().uppercase(Locale.US).replace("[^A-Z0-9]".toRegex(), "")
+                    val drmSeed = getMediaDrmId().take(8)
+                    val randSeed = UUID.randomUUID().toString().replace("-", "").uppercase(Locale.US).take(8)
+                    val seed = if (drmSeed.isNotBlank() && !drmSeed.startsWith("ERR") && !drmSeed.startsWith("FALLBACK")) {
+                        drmSeed + randSeed.take(4)
+                    } else {
+                        randSeed
+                    }
+                    val newSerial = "EP-$modelClean-$seed"
+
+                    targetFile.writeText(newSerial, Charsets.UTF_8)
+                    targetFile.setReadable(true, false) // Cấp quyền đọc toàn hệ thống
+                    targetFile.setWritable(true, false)
+                    Log.i("DeviceFingerprint", "Đã khởi tạo và lưu Enterprise Serial mới: $newSerial vào $targetFile")
+                    return newSerial
+                }
+            } catch (e: Exception) {
+                Log.w("DeviceFingerprint", "Lỗi tạo Enterprise Serial tại $dirPath: ${e.message}")
+            }
+        }
+        return null
     }
 
     /**

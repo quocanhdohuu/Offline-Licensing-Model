@@ -5,9 +5,11 @@ import android.content.SharedPreferences
 import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import java.io.File
 
 /**
- * Quản lý lưu trữ bản quyền và mốc thời gian an toàn bằng EncryptedSharedPreferences (Hardware Keystore AES-256 GCM).
+ * Quản lý lưu trữ bản quyền và mốc thời gian an toàn bằng EncryptedSharedPreferences (Hardware Keystore AES-256 GCM)
+ * kết hợp cơ chế sao lưu phục hồi tự động qua phân vùng /enterprise/ để kháng 100% Enterprise Reset.
  */
 class LicenseStorage(context: Context) {
 
@@ -18,6 +20,12 @@ class LicenseStorage(context: Context) {
         private const val KEY_ACTIVE_TOKEN = "active_jwt_token"
         private const val KEY_LAST_KNOWN_TIME = "last_known_time_sec"
         private const val KEY_ACTIVATED_AT = "activated_at_sec"
+
+        private val ENTERPRISE_BACKUP_PATHS = arrayOf(
+            "/enterprise/usr/persist/olm_active_license.jwt",
+            "/enterprise/usr/olm_active_license.jwt",
+            "/enterprise/device/settings/olm_active_license.jwt"
+        )
     }
 
     private val prefs: SharedPreferences = createEncryptedPreferences(context)
@@ -43,20 +51,42 @@ class LicenseStorage(context: Context) {
 
     /**
      * Lưu chuỗi Token bản quyền JWT đã được kích hoạt.
+     * Đồng thời tự động sao lưu vào phân vùng /enterprise/ để kháng Enterprise Reset.
      */
     fun saveLicense(token: String) {
+        val cleanToken = token.trim()
         val nowSec = System.currentTimeMillis() / 1000
         prefs.edit()
-            .putString(KEY_ACTIVE_TOKEN, token.trim())
+            .putString(KEY_ACTIVE_TOKEN, cleanToken)
             .putLong(KEY_ACTIVATED_AT, nowSec)
             .apply()
+
+        backupToEnterprisePartition(cleanToken)
     }
 
     /**
      * Lấy chuỗi Token bản quyền đang lưu.
+     * Tự động phục hồi từ phân vùng /enterprise/ nếu app vừa bị xóa data hoặc máy vừa bị Enterprise Reset.
      */
     fun getSavedLicense(): String? {
-        return prefs.getString(KEY_ACTIVE_TOKEN, null)
+        val memoryToken = prefs.getString(KEY_ACTIVE_TOKEN, null)
+        if (!memoryToken.isNullOrBlank()) {
+            return memoryToken
+        }
+
+        // Nếu SharedPreferences trống (sau khi reset máy), tự động tìm bản sao lưu trong /enterprise/
+        val backupToken = restoreFromEnterprisePartition()
+        if (!backupToken.isNullOrBlank()) {
+            Log.i(TAG, "Đã tự động khôi phục License Token từ phân vùng /enterprise!")
+            val nowSec = System.currentTimeMillis() / 1000
+            prefs.edit()
+                .putString(KEY_ACTIVE_TOKEN, backupToken)
+                .putLong(KEY_ACTIVATED_AT, nowSec)
+                .apply()
+            return backupToken
+        }
+
+        return null
     }
 
     /**
@@ -67,6 +97,66 @@ class LicenseStorage(context: Context) {
             .remove(KEY_ACTIVE_TOKEN)
             .remove(KEY_ACTIVATED_AT)
             .apply()
+
+        clearEnterpriseBackup()
+    }
+
+    /**
+     * Ghi bản sao lưu Token vào phân vùng /enterprise/.
+     */
+    private fun backupToEnterprisePartition(token: String) {
+        for (path in ENTERPRISE_BACKUP_PATHS) {
+            try {
+                val file = File(path)
+                val parent = file.parentFile
+                if (parent != null && parent.exists() && parent.canWrite()) {
+                    file.writeText(token, Charsets.UTF_8)
+                    file.setReadable(true, false)
+                    file.setWritable(true, false)
+                    Log.i(TAG, "Đã sao lưu License Token an toàn vào phân vùng /enterprise: $path")
+                    return
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Không thể sao lưu license vào $path: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Khôi phục Token từ phân vùng /enterprise/.
+     */
+    private fun restoreFromEnterprisePartition(): String? {
+        for (path in ENTERPRISE_BACKUP_PATHS) {
+            try {
+                val file = File(path)
+                if (file.exists() && file.canRead()) {
+                    val token = file.readText().trim()
+                    if (token.isNotEmpty()) {
+                        return token
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Không thể đọc sao lưu license từ $path: ${e.message}")
+            }
+        }
+        return null
+    }
+
+    /**
+     * Xóa file sao lưu trong phân vùng /enterprise/ khi người dùng chủ động bấm 'Xóa Bản Quyền'.
+     */
+    private fun clearEnterpriseBackup() {
+        for (path in ENTERPRISE_BACKUP_PATHS) {
+            try {
+                val file = File(path)
+                if (file.exists()) {
+                    file.delete()
+                    Log.i(TAG, "Đã xóa file sao lưu license $path")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Lỗi xóa file sao lưu license $path: ${e.message}")
+            }
+        }
     }
 
     /**
