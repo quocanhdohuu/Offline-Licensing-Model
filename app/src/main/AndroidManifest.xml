@@ -4,6 +4,19 @@
 
     <!-- Quyền rung khi quét mã thành công -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Quyền Camera phục vụ quét mã QR trên thiết bị không có đầu đọc laser -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+
+    <!-- Quyền đọc Serial phần cứng trên máy Zebra Technologies (Android 10 - 14) -->
+    <uses-permission android:name="com.zebra.provider.READ" />
+
+    <!-- Khai báo Package Visibility cho Zebra Content Provider (Android 11 - 14) -->
+    <queries>
+        <package android:name="com.zebra.zebracontentprovider" />
+        <provider android:authorities="oem_info" />
+    </queries>
 
     <application
         android:allowBackup="true"
@@ -23,6 +36,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Activity quét mã QR bằng Camera của ZXing -->
+        <activity
+            android:name="com.journeyapps.barcodescanner.CaptureActivity"
+            android:screenOrientation="fullSensor"
+            tools:replace="screenOrientation" />
     </application>
 
 </manifest>

@@ -1,14 +1,20 @@
 package com.example.offlinelicensingmodel
 
+import android.Manifest
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Bundle
 import android.view.inputmethod.EditorInfo
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import com.example.offlinelicensingmodel.databinding.ActivityMainBinding
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -21,6 +27,28 @@ class MainActivity : AppCompatActivity() {
     private lateinit var storage: LicenseStorage
     private lateinit var rootChecker: RootChecker
     private lateinit var hardwareScanner: HardwareScannerManager
+
+    // Bộ khởi chạy giao diện quét mã QR bằng Camera (ZXing 100% Offline)
+    private val qrScannerLauncher = registerForActivityResult(ScanContract()) { result ->
+        if (result.contents != null) {
+            val scannedToken = result.contents.trim()
+            binding.edtLicenseToken.setText(scannedToken)
+            val res = validator.validateAndActivate(scannedToken)
+            displayValidationResult(res)
+            Toast.makeText(this, "Camera: ${res.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Bộ xin cấp quyền Camera thời gian thực (Runtime Permission)
+    private val cameraPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            startCameraScanner()
+        } else {
+            Toast.makeText(this, "Cần cấp quyền Camera để quét mã QR License!", Toast.LENGTH_LONG).show()
+        }
+    }
 
     companion object {
         // Token mẫu demo cho thiết bị Newland MT90 vật lý (DF chuẩn kháng Factory Reset: 8ZRB-JNNA-TXYP-K7V9)
@@ -96,10 +124,19 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "Đã sao chép mã DF: $df", Toast.LENGTH_SHORT).show()
         }
 
-        // 2. Nút kích hoạt tia laser quét mã vạch phần cứng
+        // 2. Nút kích hoạt tia laser quét mã vạch phần cứng (Newland MT90)
         binding.btnTriggerLaser.setOnClickListener {
             hardwareScanner.triggerHardwareScan()
             Toast.makeText(this, "Đang chiếu tia laser quét mã...", Toast.LENGTH_SHORT).show()
+        }
+
+        // 2b. Nút kích hoạt Camera quét mã QR (Hỗ trợ máy không có laser)
+        binding.btnScanCamera.setOnClickListener {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                startCameraScanner()
+            } else {
+                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+            }
         }
 
         // 3. Nút kích hoạt bản quyền thủ công
@@ -248,5 +285,20 @@ class MainActivity : AppCompatActivity() {
         val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault())
         sdf.timeZone = TimeZone.getDefault()
         return sdf.format(Date(epochSec * 1000))
+    }
+
+    /**
+     * Mở giao diện Camera quét mã QR License (sử dụng thư viện ZXing Android Embedded 100% Offline).
+     */
+    private fun startCameraScanner() {
+        val options = ScanOptions().apply {
+            setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+            setPrompt("Hướng camera vào mã QR License để tự động kích hoạt")
+            setCameraId(0) // Sử dụng camera sau
+            setBeepEnabled(true)
+            setBarcodeImageEnabled(false)
+            setOrientationLocked(false)
+        }
+        qrScannerLauncher.launch(options)
     }
 }

@@ -142,27 +142,49 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="KÍCH HOẠT BẢN QUYỀN (MẮT QUÉT PHẦN CỨNG MT90)"
+                android:text="KÍCH HOẠT BẢN QUYỀN (QUÉT QR OFFLINE)"
                 android:textSize="11sp"
                 android:textStyle="bold"
                 android:textColor="#4A5568"
                 android:paddingBottom="6dp" />
 
-            <!-- Nút bật tia laser quét mã phần cứng -->
-            <Button
-                android:id="@+id/btn_trigger_laser"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Bật Tia Quét Laser"
-                android:textAllCaps="false"
-                android:textSize="13sp"
-                android:backgroundTint="#2B6CB0"
-                android:textColor="#FFFFFF" />
+                android:orientation="horizontal">
+
+                <!-- Nút bật tia laser quét mã phần cứng cho Newland MT90 -->
+                <Button
+                    android:id="@+id/btn_trigger_laser"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Quét Laser MT90"
+                    android:textAllCaps="false"
+                    android:textSize="12sp"
+                    android:backgroundTint="#2B6CB0"
+                    android:textColor="#FFFFFF" />
+
+                <View android:layout_width="8dp" android:layout_height="match_parent" />
+
+                <!-- Nút bật Camera quét mã QR cho điện thoại/tablet/máy không có laser -->
+                <Button
+                    android:id="@+id/btn_scan_camera"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Quét Bằng Camera"
+                    android:textAllCaps="false"
+                    android:textSize="12sp"
+                    android:backgroundTint="#2E7D32"
+                    android:textColor="#FFFFFF" />
+
+            </LinearLayout>
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="* Hướng đầu đọc vào mã QR License rồi bấm nút trên hoặc phím vàng."
+                android:text="* Hướng đầu đọc Laser hoặc Camera vào mã QR License để tự động kích hoạt."
                 android:textSize="11sp"
                 android:textColor="#718096"
                 android:paddingTop="4dp"

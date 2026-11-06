@@ -5,9 +5,11 @@ import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.media.MediaDrm
+import android.net.Uri
 import android.os.Build
 import android.os.StatFs
 import android.util.DisplayMetrics
+import android.util.Log
 import android.view.WindowManager
 import java.security.MessageDigest
 import java.util.Locale
@@ -52,8 +54,8 @@ object DeviceFingerprintManager {
      * Thu thập thông tin và sinh mã Device Fingerprint chuẩn hóa kháng Factory Reset.
      */
     fun getDeviceDetails(context: Context, salt: String = DEFAULT_SALT): DeviceDetails {
-        // 1. Tier 1 - Hardware Serial vật lý bất biến (khắc Laser / NVRAM chip)
-        val serial = getSafeHardwareSerial()
+        // 1. Tier 1 - Hardware Serial vật lý bất biến (khắc Laser / NVRAM chip / Zebra OEMinfo)
+        val serial = getSafeHardwareSerial(context)
 
         // 2. Tier 2 - Thông số cấu hình phần cứng tĩnh
         val manufacturer = Build.MANUFACTURER.trim().uppercase(Locale.US)
@@ -132,10 +134,25 @@ object DeviceFingerprintManager {
     }
 
     /**
-     * Đọc Hardware Serial vật lý an toàn, tương thích Android 9-14 không gây SecurityException.
+     * Đọc Hardware Serial vật lý an toàn, tương thích Android 9-14 cho cả Newland MT90 và Zebra Technologies.
+     * Áp dụng kiến trúc đa tầng:
+     * - Tầng 1: Zebra OEMinfo Content Provider (Zebra TC21/TC26/TC52/TC53/TC58/MC3300 Android 10-14).
+     * - Tầng 2: MediaTek NVRAM Serial (vendor.gsm.serial trên Newland MT90/N7).
+     * - Tầng 3: Qualcomm SoC Hardware Serial (/sys/devices/soc0/serial_number).
+     * - Tầng 4: Linux Sysfs iSerial (/sys/class/android_usb/android0/iSerial).
+     * - Tầng 5: System Properties (ro.boot.serialno, ro.serialno, ro.zebra.serial, ro.symbol.serial).
+     * - Tầng 6: MediaDrm Hardware UUID (Đảm bảo điện thoại thông thường không bao giờ bị trùng DF chéo máy).
      */
-    fun getSafeHardwareSerial(): String {
-        // Tầng 1: Đọc Vendor Property MediaTek / Newland (chứa số Serial gốc NVRAM)
+    fun getSafeHardwareSerial(context: Context? = null): String {
+        // Tầng 1: Zebra Technologies OEMinfo Content Provider (Khuyến nghị của Zebra cho Android 10 - 14)
+        if (context != null) {
+            val zebraSerial = getZebraSerialFromOemInfo(context)
+            if (!zebraSerial.isNullOrBlank()) {
+                return zebraSerial
+            }
+        }
+
+        // Tầng 2: Đọc Vendor Property MediaTek / Newland (chứa số Serial gốc NVRAM MT90)
         val vendorSerial = getSystemProperty("vendor.gsm.serial")
         if (!vendorSerial.isNullOrBlank() && vendorSerial != "unknown") {
             val cleanSerial = vendorSerial.trim().split("\\s+".toRegex())[0]
@@ -144,7 +161,13 @@ object DeviceFingerprintManager {
             }
         }
 
-        // Tầng 2: Đọc file node Linux Sysfs iSerial
+        // Tầng 3: Đọc Qualcomm SoC Serial (Thường có trên chip Snapdragon của Zebra và PDA cao cấp)
+        val qcomSerial = getQualcommSocSerial()
+        if (!qcomSerial.isNullOrBlank()) {
+            return qcomSerial
+        }
+
+        // Tầng 4: Đọc file node Linux Sysfs iSerial
         try {
             val iSerial = java.io.File("/sys/class/android_usb/android0/iSerial")
             if (iSerial.exists() && iSerial.canRead()) {
@@ -155,18 +178,84 @@ object DeviceFingerprintManager {
             }
         } catch (_: Exception) { }
 
-        // Tầng 3: Thử đọc ro.boot.serialno hoặc ro.serialno
-        val bootSerial = getSystemProperty("ro.boot.serialno")
-        if (!bootSerial.isNullOrBlank() && bootSerial != "unknown") {
-            return bootSerial.trim().uppercase(Locale.US)
+        // Tầng 5: Thử đọc các biến Bootloader / Zebra OEM Properties
+        val propKeys = arrayOf(
+            "ro.boot.serialno",
+            "ro.serialno",
+            "ro.zebra.serial",
+            "ro.symbol.serial",
+            "persist.sys.zebra.serial",
+            "vendor.serialno"
+        )
+        for (key in propKeys) {
+            val valStr = getSystemProperty(key)
+            if (!valStr.isNullOrBlank() && valStr != "unknown") {
+                return valStr.trim().uppercase(Locale.US)
+            }
         }
 
-        val propSerial = getSystemProperty("ro.serialno")
-        if (!propSerial.isNullOrBlank() && propSerial != "unknown") {
-            return propSerial.trim().uppercase(Locale.US)
+        // Tầng 6: Cứu cánh thông minh cho điện thoại thương mại (Pixel, Samsung...)
+        // Dùng MediaDrm Device Unique ID để đảm bảo 2 máy cùng dòng KHÔNG BAO GIỜ bị trùng DF!
+        val drmId = getMediaDrmId()
+        if (drmId.isNotBlank() && drmId != "FALLBACK-NOWIDEVINE") {
+            return "DRM-$drmId"
         }
 
-        return "GENERIC-MT90-SERIAL"
+        return "GENERIC-PDA-SERIAL"
+    }
+
+    /**
+     * Đọc Hardware Serial trên thiết bị Zebra Technologies qua OEMinfo Content Provider (Android 10 - 14).
+     */
+    private fun getZebraSerialFromOemInfo(context: Context): String? {
+        val uris = arrayOf(
+            "content://oem_info/oem.zebra.secure/build_serial",
+            "content://oem_info/oem.zebra.secure/serial"
+        )
+        for (uriStr in uris) {
+            try {
+                val uri = Uri.parse(uriStr)
+                val cursor = context.contentResolver.query(uri, null, null, null, null)
+                Log.d("DeviceFingerprint", "Zebra OEMinfo query [$uriStr]: cursor=$cursor, count=${cursor?.count}")
+                cursor?.use { c ->
+                    if (c.moveToFirst()) {
+                        val colNames = c.columnNames.joinToString(",")
+                        Log.d("DeviceFingerprint", "Zebra OEMinfo columns: $colNames")
+                        val colIdx = c.getColumnIndex("build_serial")
+                        val serial = if (colIdx != -1) c.getString(colIdx) else c.getString(0)
+                        Log.d("DeviceFingerprint", "Zebra OEMinfo value: $serial")
+                        if (!serial.isNullOrBlank() && serial != "unknown") {
+                            return serial.trim().uppercase(Locale.US)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w("DeviceFingerprint", "Không thể query Zebra OEMinfo [$uriStr]: ${e.message}")
+            }
+        }
+        return null
+    }
+
+    /**
+     * Đọc Hardware Serial của chip Qualcomm Snapdragon qua sysfs soc0.
+     */
+    private fun getQualcommSocSerial(): String? {
+        val paths = arrayOf(
+            "/sys/devices/soc0/serial_number",
+            "/sys/devices/system/soc/soc0/serial_number"
+        )
+        for (path in paths) {
+            try {
+                val file = java.io.File(path)
+                if (file.exists() && file.canRead()) {
+                    val s = file.readText().trim()
+                    if (s.isNotEmpty() && s != "0" && s != "unknown") {
+                        return s.uppercase(Locale.US)
+                    }
+                }
+            } catch (_: Exception) { }
+        }
+        return null
     }
 
     private fun getSystemProperty(key: String): String? {
