@@ -22,9 +22,20 @@ class LicenseStorage(context: Context) {
         private const val KEY_ACTIVATED_AT = "activated_at_sec"
 
         private val ENTERPRISE_BACKUP_PATHS = arrayOf(
+            // 1. Zebra Technologies & Datalogic
             "/enterprise/usr/persist/olm_active_license.jwt",
             "/enterprise/usr/olm_active_license.jwt",
-            "/enterprise/device/settings/olm_active_license.jwt"
+            "/enterprise/device/settings/olm_active_license.jwt",
+            "/enterprise/datalogic/olm_active_license.jwt",
+
+            // 2. Honeywell (Enterprise Provisioner)
+            "/sdcard/honeywell/persist/olm_active_license.jwt",
+            "/storage/emulated/0/honeywell/persist/olm_active_license.jwt",
+            "/enterprise/honeywell/persist/olm_active_license.jwt",
+
+            // 3. Point Mobile (EmKit Staging)
+            "/sdcard/PointMobile/olm_active_license.jwt",
+            "/storage/emulated/0/PointMobile/olm_active_license.jwt"
         )
     }
 
@@ -109,12 +120,20 @@ class LicenseStorage(context: Context) {
             try {
                 val file = File(path)
                 val parent = file.parentFile
-                if (parent != null && parent.exists() && parent.canWrite()) {
-                    file.writeText(token, Charsets.UTF_8)
-                    file.setReadable(true, false)
-                    file.setWritable(true, false)
-                    Log.i(TAG, "Đã sao lưu License Token an toàn vào phân vùng /enterprise: $path")
-                    return
+                if (parent != null) {
+                    if (!parent.exists()) {
+                        val grandParent = parent.parentFile
+                        if (grandParent != null && grandParent.exists() && grandParent.isDirectory && grandParent.canWrite()) {
+                            parent.mkdirs()
+                        }
+                    }
+                    if (parent.exists() && parent.canWrite()) {
+                        file.writeText(token, Charsets.UTF_8)
+                        file.setReadable(true, false)
+                        file.setWritable(true, false)
+                        Log.i(TAG, "Đã sao lưu License Token an toàn vào phân vùng /enterprise: $path")
+                        return
+                    }
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "Không thể sao lưu license vào $path: ${e.message}")

@@ -213,20 +213,42 @@ object DeviceFingerprintManager {
     }
 
     private val ENTERPRISE_PATHS = arrayOf(
+        // 1. Zebra Technologies & Datalogic
         "/enterprise/usr/persist/olm_device_serial.dat",
         "/enterprise/usr/olm_device_serial.dat",
-        "/enterprise/device/settings/olm_device_serial.dat"
+        "/enterprise/device/settings/olm_device_serial.dat",
+        "/enterprise/datalogic/olm_device_serial.dat",
+
+        // 2. Honeywell (Enterprise Provisioner)
+        "/sdcard/honeywell/persist/olm_device_serial.dat",
+        "/storage/emulated/0/honeywell/persist/olm_device_serial.dat",
+        "/enterprise/honeywell/persist/olm_device_serial.dat",
+
+        // 3. Point Mobile (EmKit Staging)
+        "/sdcard/PointMobile/olm_device_serial.dat",
+        "/storage/emulated/0/PointMobile/olm_device_serial.dat"
     )
 
     private val ENTERPRISE_DIRS = arrayOf(
+        // 1. Zebra & Datalogic
         "/enterprise/usr/persist",
         "/enterprise/usr",
-        "/enterprise/device/settings"
+        "/enterprise/device/settings",
+        "/enterprise/datalogic",
+
+        // 2. Honeywell
+        "/sdcard/honeywell/persist",
+        "/storage/emulated/0/honeywell/persist",
+        "/enterprise/honeywell/persist",
+
+        // 3. Point Mobile
+        "/sdcard/PointMobile",
+        "/storage/emulated/0/PointMobile"
     )
 
     /**
-     * Đọc hoặc khởi tạo Serial bền vững trong phân vùng Doanh nghiệp (/enterprise/).
-     * Kháng 100% Enterprise Reset trên tất cả các dòng Zebra, Honeywell.
+     * Đọc hoặc khởi tạo Serial bền vững trong phân vùng Doanh nghiệp (/enterprise/, Honeywell, Point Mobile).
+     * Kháng 100% Enterprise Reset trên tất cả các dòng Zebra, Honeywell, Point Mobile, Datalogic.
      */
     private fun getOrGenerateEnterpriseSerial(): String? {
         // 1. Tìm đọc file serial đã tồn tại trước đó
@@ -245,10 +267,16 @@ object DeviceFingerprintManager {
             }
         }
 
-        // 2. Nếu chưa có, khởi tạo token mới và lưu vào phân vùng /enterprise/
+        // 2. Nếu chưa có, khởi tạo token mới và lưu vào thư mục bất biến đầu tiên khả dụng
         for (dirPath in ENTERPRISE_DIRS) {
             try {
                 val dir = java.io.File(dirPath)
+                if (!dir.exists()) {
+                    val parent = dir.parentFile
+                    if (parent != null && parent.exists() && parent.isDirectory && parent.canWrite()) {
+                        dir.mkdirs()
+                    }
+                }
                 if (dir.exists() && dir.isDirectory && dir.canWrite()) {
                     val targetFile = java.io.File(dir, "olm_device_serial.dat")
                     val modelClean = Build.MODEL.trim().uppercase(Locale.US).replace("[^A-Z0-9]".toRegex(), "")
