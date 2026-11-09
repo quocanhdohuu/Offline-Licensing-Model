@@ -173,9 +173,18 @@ class MainActivity : AppCompatActivity() {
 
         // 5. Nút kiểm tra lại trạng thái bản quyền
         binding.btnReverify.setOnClickListener {
-            refreshLicenseStatus()
+            val currentToken = binding.edtLicenseToken.text.toString().trim()
+            if (currentToken.isNotEmpty()) {
+                // Ưu tiên thẩm định lại chuỗi Token đang hiển thị trong ô nhập (đảm bảo tính nhất quán khi test Case 1, 2, 3, 4)
+                val result = validator.validateToken(currentToken)
+                displayValidationResult(result)
+                Toast.makeText(this, "Đã kiểm tra lại mã trên màn hình: ${result.status}", Toast.LENGTH_SHORT).show()
+            } else {
+                // Nếu ô nhập trống, thẩm định lại bản quyền đã lưu trong máy
+                refreshLicenseStatus()
+                Toast.makeText(this, "Đã kiểm tra lại bản quyền lưu trong máy!", Toast.LENGTH_SHORT).show()
+            }
             checkAndDisplayRootStatus()
-            Toast.makeText(this, "Đã cập nhật kiểm tra bản quyền!", Toast.LENGTH_SHORT).show()
         }
 
         // 6. Nút xóa bản quyền (Reset)
