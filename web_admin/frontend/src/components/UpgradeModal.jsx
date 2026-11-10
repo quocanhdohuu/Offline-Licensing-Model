@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { X, Crown, ShieldCheck, Check, AlertCircle, Smartphone, Download, Copy, Sparkles, ArrowRight } from 'lucide-react'
 import { licenseApi } from '../api/licenseApi'
 
@@ -10,6 +11,20 @@ export default function UpgradeModal({ license, onClose, onSuccess }) {
   const [error, setError] = useState('')
   const [result, setResult] = useState(null)
   const [copiedToken, setCopiedToken] = useState(false)
+
+  // Khóa cuộn trang và lắng nghe phím ESC để đóng modal
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    document.body.style.overflow = 'hidden'
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = 'unset'
+    }
+  }, [onClose])
 
   if (!license) return null
 
@@ -54,9 +69,15 @@ export default function UpgradeModal({ license, onClose, onSuccess }) {
     setTimeout(() => setCopiedToken(false), 2500)
   }
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="relative bg-slate-900 border border-slate-700 w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden">
+  return createPortal(
+    <div
+      onClick={onClose}
+      className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-[9999] w-screen h-screen min-h-screen bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative bg-slate-900 border border-slate-700 w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-150"
+      >
         {/* Modal Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/70">
           <div className="flex items-center gap-2.5">
@@ -285,7 +306,7 @@ export default function UpgradeModal({ license, onClose, onSuccess }) {
           </form>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
-

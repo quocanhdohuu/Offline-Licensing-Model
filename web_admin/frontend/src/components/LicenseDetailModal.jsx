@@ -1,9 +1,24 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { X, Copy, Check, Download, QrCode, FileText, Smartphone, Calendar, User, ShieldCheck } from 'lucide-react'
 
 export default function LicenseDetailModal({ license, onClose }) {
   const [copiedToken, setCopiedToken] = useState(false)
   const [copiedDf, setCopiedDf] = useState(false)
+
+  // Khóa cuộn trang và lắng nghe phím ESC để đóng modal
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    document.body.style.overflow = 'hidden'
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = 'unset'
+    }
+  }, [onClose])
 
   if (!license) return null
 
@@ -21,7 +36,7 @@ export default function LicenseDetailModal({ license, onClose }) {
     setTimeout(() => setCopiedDf(false), 2500)
   }
 
-  // Tải trực tiếp file ảnh PNG từ chuỗi Base64 (Không phụ thuộc mạng hay Token)
+  // Tải trực tiếp file ảnh PNG từ chuỗi Base64
   const handleDownloadQr = () => {
     const link = document.createElement('a')
     link.href = license.qr_code_base64
@@ -31,7 +46,7 @@ export default function LicenseDetailModal({ license, onClose }) {
     document.body.removeChild(link)
   }
 
-  // Tải trực tiếp file text .lic từ chuỗi JWT (Không bị lỗi xác thực 401)
+  // Tải trực tiếp file text .lic từ chuỗi JWT
   const handleDownloadLic = () => {
     const blob = new Blob([license.license_jwt], { type: 'text/plain;charset=utf-8' })
     const url = URL.createObjectURL(blob)
@@ -60,9 +75,15 @@ export default function LicenseDetailModal({ license, onClose }) {
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="relative bg-slate-900 border border-slate-700 w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden">
+  return createPortal(
+    <div
+      onClick={onClose}
+      className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-[9999] w-screen h-screen min-h-screen bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative bg-slate-900 border border-slate-700 w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-150"
+      >
         {/* Modal Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/60">
           <div className="flex items-center gap-2.5">
@@ -102,7 +123,7 @@ export default function LicenseDetailModal({ license, onClose }) {
               </p>
             </div>
 
-            {/* Cụm nút tải file: Xử lý trực tiếp trên browser, đảm bảo tải đúng định dạng file */}
+            {/* Cụm nút tải file */}
             <div className="w-full space-y-2.5 mt-4 pt-4 border-t border-slate-800">
               <button
                 type="button"
@@ -241,6 +262,7 @@ export default function LicenseDetailModal({ license, onClose }) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
