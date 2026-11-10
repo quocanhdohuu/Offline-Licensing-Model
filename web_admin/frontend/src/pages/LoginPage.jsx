@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { ShieldCheck, Lock, User, Eye, EyeOff, LogIn, Sparkles, UserCheck, Shield } from 'lucide-react'
+import { ShieldCheck, Lock, User, Eye, EyeOff, LogIn } from 'lucide-react'
 
 export default function LoginPage() {
   const { login } = useAuth()
@@ -26,24 +26,8 @@ export default function LoginPage() {
       if (err.response?.data?.detail) {
         setError(err.response.data.detail)
       } else {
-        setError('Không thể kết nối tới máy chủ. Vui lòng thử lại!')
+        setError('Không thể kết nối tới máy chủ. Vui lòng kiểm tra lại!')
       }
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Tiện ích Demo 1-Click
-  const handleQuickLogin = async (userDemo, passDemo) => {
-    setUsername(userDemo)
-    setPassword(passDemo)
-    setError('')
-    setLoading(true)
-    try {
-      await login(userDemo, passDemo)
-    } catch (err) {
-      console.error(err)
-      setError(err.response?.data?.detail || 'Đăng nhập demo thất bại!')
     } finally {
       setLoading(false)
     }
@@ -88,8 +72,9 @@ export default function LoginPage() {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="admin hoặc sale"
-                  className="block w-full pl-10 pr-3 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm transition"
+                  placeholder="Nhập tên đăng nhập..."
+                  autoComplete="username"
+                  className="block w-full pl-10 pr-3 py-2.5 bg-slate-950/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm transition"
                   disabled={loading}
                 />
               </div>
@@ -107,8 +92,9 @@ export default function LoginPage() {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="block w-full pl-10 pr-10 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm transition"
+                  placeholder="Nhập mật khẩu..."
+                  autoComplete="current-password"
+                  className="block w-full pl-10 pr-10 py-2.5 bg-slate-950/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm transition"
                   disabled={loading}
                 />
                 <button
@@ -135,66 +121,13 @@ export default function LoginPage() {
               )}
             </button>
           </form>
-
-          {/* Cụm Demo 1-Click Login */}
-          <div className="mt-6 pt-6 border-t border-slate-700/80">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-3">
-              <Sparkles className="w-3.5 h-3.5" /> Chế độ Demo 1-Click (Dành cho thử nghiệm)
-            </div>
-            <div className="grid grid-cols-1 gap-2.5">
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('admin', 'admin123')}
-                disabled={loading}
-                className="w-full flex items-center justify-between p-3 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 rounded-xl text-left transition group"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="p-1.5 rounded-lg bg-indigo-500/20 text-indigo-400">
-                    <Shield className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-white group-hover:text-indigo-300 transition">
-                      Đăng nhập QUẢN TRỊ VIÊN (Admin)
-                    </div>
-                    <div className="text-[11px] text-slate-400">Toàn quyền: Sinh key mới & Nâng cấp gói</div>
-                  </div>
-                </div>
-                <span className="text-xs text-indigo-400 font-semibold group-hover:translate-x-0.5 transition">
-                  admin &rarr;
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('sale', 'sale123')}
-                disabled={loading}
-                className="w-full flex items-center justify-between p-3 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-xl text-left transition group"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400">
-                    <UserCheck className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-white group-hover:text-emerald-300 transition">
-                      Đăng nhập KINH DOANH (Sale)
-                    </div>
-                    <div className="text-[11px] text-slate-400">Tra cứu & Lấy lại QR cấp lại cho khách</div>
-                  </div>
-                </div>
-                <span className="text-xs text-emerald-400 font-semibold group-hover:translate-x-0.5 transition">
-                  sale &rarr;
-                </span>
-              </button>
-            </div>
-          </div>
         </div>
 
         {/* Footer ghi chú bảo mật */}
-        <p className="mt-4 text-center text-xs text-slate-400">
-          Chữ ký số Ed25519 &bull; JWT RFC 8037 &bull; Không cần kết nối Internet trên thiết bị
+        <p className="mt-6 text-center text-xs text-slate-400">
+          Chữ ký số Ed25519 &bull; Chuẩn JWT RFC 8037 &bull; Tân Hưng Hà
         </p>
       </div>
     </div>
   )
 }
-

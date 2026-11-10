@@ -1,0 +1,6 @@
+@echo off
+echo Stopping OLM Admin Demo servers...
+taskkill /f /im node.exe >nul 2>&1
+echo [OK] Stopped frontend processes.
+echo Press any key to close...
+pause >nul
