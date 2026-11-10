@@ -4,10 +4,13 @@ import { useAuth } from '../contexts/AuthContext'
 import SearchFilter from '../components/SearchFilter'
 import LicenseTable from '../components/LicenseTable'
 import LicenseDetailModal from '../components/LicenseDetailModal'
-import { Plus, Smartphone, ShieldCheck, HelpCircle } from 'lucide-react'
+import CreateLicenseModal from '../components/CreateLicenseModal'
+import UpgradeModal from '../components/UpgradeModal'
+import StatsCards from '../components/StatsCards'
+import { Plus, Smartphone, HelpCircle } from 'lucide-react'
 
-export default function DashboardPage({ onOpenCreate, onOpenUpgrade }) {
-  const { isAdmin, isSale, user } = useAuth()
+export default function DashboardPage() {
+  const { isAdmin, isSale } = useAuth()
   const [licenses, setLicenses] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -17,8 +20,10 @@ export default function DashboardPage({ onOpenCreate, onOpenUpgrade }) {
   const [statusFilter, setStatusFilter] = useState('ACTIVE')
   const [typeFilter, setTypeFilter] = useState('')
 
-  // Modal Chi tiết & Cấp lại
-  const [selectedLicense, setSelectedLicense] = useState(null)
+  // Modals state
+  const [selectedLicense, setSelectedLicense] = useState(null) // Modal xem & cấp lại
+  const [showCreateModal, setShowCreateModal] = useState(false) // Modal tạo mới (Admin)
+  const [upgradeTargetLicense, setUpgradeTargetLicense] = useState(null) // Modal nâng cấp (Admin)
 
   const fetchLicenses = useCallback(async () => {
     setLoading(true)
@@ -47,6 +52,9 @@ export default function DashboardPage({ onOpenCreate, onOpenUpgrade }) {
 
   return (
     <div className="space-y-6">
+      {/* THẺ THỐNG KÊ KPI: CHỈ ADMIN MỚI ĐƯỢC XEM */}
+      {isAdmin && <StatsCards />}
+
       {/* Thanh tiêu đề & Nút Tạo mới (Chỉ dành cho Admin) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -62,9 +70,9 @@ export default function DashboardPage({ onOpenCreate, onOpenUpgrade }) {
         </div>
 
         {/* Nút Cấp License Mới (CHỈ ADMIN THẤY) */}
-        {isAdmin && onOpenCreate && (
+        {isAdmin && (
           <button
-            onClick={onOpenCreate}
+            onClick={() => setShowCreateModal(true)}
             className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-600/30 transition transform hover:-translate-y-0.5 active:translate-y-0"
           >
             <Plus className="w-4 h-4" />
@@ -106,18 +114,38 @@ export default function DashboardPage({ onOpenCreate, onOpenUpgrade }) {
           licenses={licenses}
           loading={loading}
           onSelectLicense={(lic) => setSelectedLicense(lic)}
-          onOpenUpgrade={onOpenUpgrade}
+          onOpenUpgrade={(lic) => setUpgradeTargetLicense(lic)}
         />
       )}
 
-      {/* Modal Xem & Cấp lại License */}
+      {/* Modal 1: Xem & Cấp lại License (Cho cả Sale & Admin) */}
       {selectedLicense && (
         <LicenseDetailModal
           license={selectedLicense}
           onClose={() => setSelectedLicense(null)}
         />
       )}
+
+      {/* Modal 2: Tạo License Mới (Chỉ Admin) */}
+      {showCreateModal && (
+        <CreateLicenseModal
+          onClose={() => setShowCreateModal(false)}
+          onSuccess={() => {
+            fetchLicenses()
+          }}
+        />
+      )}
+
+      {/* Modal 3: Nâng Cấp Gói Bản Quyền (Chỉ Admin) */}
+      {upgradeTargetLicense && (
+        <UpgradeModal
+          license={upgradeTargetLicense}
+          onClose={() => setUpgradeTargetLicense(null)}
+          onSuccess={() => {
+            fetchLicenses()
+          }}
+        />
+      )}
     </div>
   )
 }
-
