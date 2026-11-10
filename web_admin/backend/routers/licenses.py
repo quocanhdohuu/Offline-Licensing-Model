@@ -249,8 +249,8 @@ def upgrade_license(
 @router.get("/{id}/download-qr")
 def download_qr(
     id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    token: Optional[str] = Query(None, description="Session JWT token khi gọi trực tiếp từ thẻ a"),
+    db: Session = Depends(get_db)
 ):
     """Tải trực tiếp file ảnh mã QR PNG chất lượng cao về máy."""
     lic = db.query(License).filter(License.id == id).first()
@@ -262,7 +262,7 @@ def download_qr(
     qr_bytes = base64.b64decode(encoded)
 
     clean_df = lic.device.df.replace("-", "")
-    filename = f"qr_license_{clean_df}.png"
+    filename = f"qr_{clean_df}.png"
 
     return Response(
         content=qr_bytes,
@@ -273,8 +273,8 @@ def download_qr(
 @router.get("/{id}/download-lic")
 def download_lic(
     id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    token: Optional[str] = Query(None, description="Session JWT token khi gọi trực tiếp từ thẻ a"),
+    db: Session = Depends(get_db)
 ):
     """Tải trực tiếp file token .lic về máy."""
     lic = db.query(License).filter(License.id == id).first()

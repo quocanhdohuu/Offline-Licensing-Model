@@ -55,8 +55,12 @@ def test_step3():
     print(f"[+] 6. Sale xem chi tiết & lấy lại QR Code cấp lại cho khách -> OK (PASSED)")
 
     # 7. PHÂN QUYỀN: Sale cố tình gọi API tạo License mới -> Phải bị chặn 403 Forbidden!
+    import time
+    ts_suffix = str(int(time.time()))[-4:]
+    test_df_code = f"TEST-1234-5678-{ts_suffix}"
+
     new_payload = {
-        "df": "WXYZ-1234-5678-9ABC",
+        "df": test_df_code,
         "model": "Honeywell CT40",
         "customer_name": "Kho Vận Hải Phòng",
         "customer_phone": "0933221100",
@@ -72,7 +76,7 @@ def test_step3():
     res_create = client.post("/api/licenses", json=new_payload, headers=admin_headers)
     assert res_create.status_code == 201, f"Admin tạo key lỗi: {res_create.text}"
     created_lic = res_create.json()
-    assert created_lic["df"] == "WXYZ-1234-5678-9ABC"
+    assert created_lic["df"] == test_df_code
     assert created_lic["version"] == 1
     print(f"[+] 8. Admin sinh License mới ({created_lic['model']} - v{created_lic['version']}) -> Ký số thành công (PASSED)")
 
