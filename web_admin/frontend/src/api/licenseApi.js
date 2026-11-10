@@ -20,6 +20,10 @@ export const licenseApi = {
     const res = await client.get(`/licenses/${id}`)
     return res.data
   },
+  checkDf: async (df) => {
+    const res = await client.get(`/licenses/check-df/${encodeURIComponent(df)}`)
+    return res.data
+  },
   createLicense: async (data) => {
     const res = await client.post('/licenses', data)
     return res.data

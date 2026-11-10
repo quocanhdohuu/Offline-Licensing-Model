@@ -141,10 +141,17 @@ class MainActivity : AppCompatActivity() {
 
         // 3. Nút kích hoạt bản quyền thủ công
         binding.btnActivate.setOnClickListener {
-            val token = binding.edtLicenseToken.text.toString().trim()
-            if (token.isEmpty()) {
+            val rawText = binding.edtLicenseToken.text.toString().trim()
+            if (rawText.isEmpty()) {
                 Toast.makeText(this, "Vui lòng nhập hoặc dán chuỗi License Token!", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
+            }
+
+            // Nếu đầu đọc bàn phím ảo quét nối đuôi vào mã cũ, tự động trích xuất JWT mới nhất
+            val lastJwtIdx = rawText.lastIndexOf("eyJ")
+            val token = if (lastJwtIdx > 0) rawText.substring(lastJwtIdx).trim() else rawText
+            if (lastJwtIdx > 0) {
+                binding.edtLicenseToken.setText(token)
             }
 
             val result = validator.validateAndActivate(token)
@@ -154,8 +161,13 @@ class MainActivity : AppCompatActivity() {
         // Xử lý tự kích hoạt khi đầu đọc ở chế độ bàn phím ảo (Keystroke Emulation)
         binding.edtLicenseToken.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_DONE || actionId == EditorInfo.IME_NULL) {
-                val token = binding.edtLicenseToken.text.toString().trim()
-                if (token.isNotEmpty()) {
+                val rawText = binding.edtLicenseToken.text.toString().trim()
+                if (rawText.isNotEmpty()) {
+                    val lastJwtIdx = rawText.lastIndexOf("eyJ")
+                    val token = if (lastJwtIdx > 0) rawText.substring(lastJwtIdx).trim() else rawText
+                    if (lastJwtIdx > 0) {
+                        binding.edtLicenseToken.setText(token)
+                    }
                     val result = validator.validateAndActivate(token)
                     displayValidationResult(result)
                 }
@@ -239,16 +251,22 @@ class MainActivity : AppCompatActivity() {
         when (result.status) {
             LicenseValidator.LicenseStatus.VALID -> {
                 val p = result.payload!!
-                binding.tvLicenseStatus.text = "HỢP LỆ (GÓI ${p.type})"
+                val statusLabel = if (p.isPermanent && !p.type.contains("VĨNH VIỄN")) {
+                    "HỢP LỆ (GÓI ${p.type} VĨNH VIỄN)"
+                } else {
+                    "HỢP LỆ (GÓI ${p.type})"
+                }
+                binding.tvLicenseStatus.text = statusLabel
                 binding.tvLicenseStatus.setTextColor(Color.parseColor("#2E7D32")) // Green
 
+                val expDisplay = if (p.isPermanent) "VĨNH VIỄN (Không thời hạn)" else formatEpoch(p.exp)
                 val details = StringBuilder()
-                details.append("Trạng thái: Hoạt động bình thường\n")
+                details.append("Trạng thái: Hoạt động bình thường (v${p.version})\n")
                 details.append("Khách hàng: ${p.customer}\n")
                 details.append("Model chỉ định: ${p.model}\n")
                 details.append("Mã DF kích hoạt: ${p.df}\n")
                 details.append("Ngày cấp: ${formatEpoch(p.iat)}\n")
-                details.append("Hạn sử dụng: ${formatEpoch(p.exp)}\n")
+                details.append("Hạn sử dụng: $expDisplay\n")
                 details.append("Tính năng mở: ${p.features.joinToString(", ")}")
                 binding.tvLicenseDetails.text = details.toString()
             }

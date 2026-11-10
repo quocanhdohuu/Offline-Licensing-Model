@@ -24,6 +24,7 @@ export default function DashboardPage() {
   const [selectedLicense, setSelectedLicense] = useState(null) // Modal xem & cấp lại
   const [showCreateModal, setShowCreateModal] = useState(false) // Modal tạo mới (Admin)
   const [upgradeTargetLicense, setUpgradeTargetLicense] = useState(null) // Modal nâng cấp (Admin)
+  const [statsRefresh, setStatsRefresh] = useState(0)
 
   const fetchLicenses = useCallback(async () => {
     setLoading(true)
@@ -53,7 +54,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* THẺ THỐNG KÊ KPI: CHỈ ADMIN MỚI ĐƯỢC XEM */}
-      {isAdmin && <StatsCards />}
+      {isAdmin && <StatsCards refreshTrigger={statsRefresh} />}
 
       {/* Thanh tiêu đề & Nút Tạo mới (Chỉ dành cho Admin) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -132,6 +133,7 @@ export default function DashboardPage() {
           onClose={() => setShowCreateModal(false)}
           onSuccess={() => {
             fetchLicenses()
+            setStatsRefresh((c) => c + 1)
           }}
         />
       )}
@@ -143,6 +145,7 @@ export default function DashboardPage() {
           onClose={() => setUpgradeTargetLicense(null)}
           onSuccess={() => {
             fetchLicenses()
+            setStatsRefresh((c) => c + 1)
           }}
         />
       )}

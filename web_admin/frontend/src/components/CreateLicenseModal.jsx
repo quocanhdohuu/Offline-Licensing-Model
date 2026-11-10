@@ -21,6 +21,7 @@ export default function CreateLicenseModal({ onClose, onSuccess }) {
 
   // Status
   const [dfError, setDfError] = useState('')
+  const [existingDevice, setExistingDevice] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [generalError, setGeneralError] = useState('')
   const [createdResult, setCreatedResult] = useState(null)
@@ -75,6 +76,40 @@ export default function CreateLicenseModal({ onClose, onSuccess }) {
   }
 
   const isDfValid = rawDf.replace(/-/g, '').length === 16 && !dfError
+
+  // Tự động kiểm tra xem DF đã tồn tại trong hệ thống chưa khi nhập đủ 16 ký tự
+  useEffect(() => {
+    let cancelled = false
+    async function checkExisting() {
+      if (!isDfValid) {
+        setExistingDevice(null)
+        return
+      }
+      try {
+        const res = await licenseApi.checkDf(rawDf)
+        if (cancelled) return
+        if (res.exists) {
+          setExistingDevice(res)
+          const presetModels = ['Newland NLS-MT90', 'Zebra MC3300x', 'iMin Swift 2', 'Honeywell ScanPal EDA51', 'Honeywell CT40']
+          if (presetModels.includes(res.model)) {
+            setModel(res.model)
+          } else {
+            setModel('OTHER')
+            setCustomModel(res.model)
+          }
+          setCustomerName(res.customer_name || '')
+          setCustomerPhone(res.customer_phone || '')
+          setCustomerEmail(res.customer_email || '')
+        } else {
+          setExistingDevice(null)
+        }
+      } catch (err) {
+        console.error('Check DF error:', err)
+      }
+    }
+    checkExisting()
+    return () => { cancelled = true }
+  }, [rawDf, isDfValid])
 
   const handleFeatureToggle = (feat) => {
     if (features.includes(feat)) {
@@ -268,6 +303,21 @@ export default function CreateLicenseModal({ onClose, onSuccess }) {
               )}
             </div>
 
+            {/* Cảnh báo nếu mã DF đã tồn tại trên hệ thống */}
+            {existingDevice && (
+              <div className="p-3 bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs rounded-xl flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <div className="font-bold text-amber-300">
+                    Thiết bị đã tồn tại trong hệ thống (Đã khóa giữ nguyên thông tin gốc)
+                  </div>
+                  <div className="text-[11px] text-amber-200/80 mt-0.5">
+                    Mã DF này đang gắn với máy <strong>{existingDevice.model}</strong> của <strong>{existingDevice.customer_name}</strong> (Gói hiện tại: {existingDevice.current_license_type} v{existingDevice.current_version}). Khi sinh key mới, phiên bản sẽ tự động nâng lên <strong>v{existingDevice.current_version + 1}</strong> và giữ nguyên thiết bị gốc.
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Chọn Model máy */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
@@ -277,7 +327,8 @@ export default function CreateLicenseModal({ onClose, onSuccess }) {
                 <select
                   value={model}
                   onChange={(e) => setModel(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  disabled={!!existingDevice}
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <option value="Newland NLS-MT90">Newland NLS-MT90</option>
                   <option value="Zebra MC3300x">Zebra MC3300x</option>
@@ -297,8 +348,9 @@ export default function CreateLicenseModal({ onClose, onSuccess }) {
                     type="text"
                     value={customModel}
                     onChange={(e) => setCustomModel(e.target.value)}
+                    disabled={!!existingDevice}
                     placeholder="VD: Point Mobile PM85"
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                 </div>
               ) : (
@@ -310,8 +362,9 @@ export default function CreateLicenseModal({ onClose, onSuccess }) {
                     type="text"
                     value={customerPhone}
                     onChange={(e) => setCustomerPhone(e.target.value)}
+                    disabled={!!existingDevice}
                     placeholder="VD: 0912345678"
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                 </div>
               )}
@@ -327,8 +380,9 @@ export default function CreateLicenseModal({ onClose, onSuccess }) {
                   type="text"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
+                  disabled={!!existingDevice}
                   placeholder="VD: Công ty Kho Vận Á Châu"
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -340,8 +394,9 @@ export default function CreateLicenseModal({ onClose, onSuccess }) {
                   type="email"
                   value={customerEmail}
                   onChange={(e) => setCustomerEmail(e.target.value)}
+                  disabled={!!existingDevice}
                   placeholder="contact@achau.vn"
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed"
                 />
               </div>
             </div>

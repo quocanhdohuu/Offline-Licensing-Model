@@ -77,6 +77,36 @@ def get_licenses(
     licenses = query.order_by(desc(License.id)).all()
     return [format_license_response(lic) for lic in licenses]
 
+@router.get("/check-df/{df}")
+def check_device_by_df(
+    df: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Kiểm tra nhanh xem mã DF đã đăng ký thiết bị trong hệ thống hay chưa."""
+    try:
+        norm_df = normalize_df(df)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    dev = db.query(Device).filter(Device.df == norm_df).first()
+    if not dev:
+        return {"exists": False, "df": norm_df}
+
+    active_lic = db.query(License).filter(License.device_id == dev.id, License.status == "ACTIVE").first()
+    return {
+        "exists": True,
+        "df": dev.df,
+        "model": dev.model,
+        "customer_name": dev.customer_name,
+        "customer_phone": dev.customer_phone,
+        "customer_email": dev.customer_email,
+        "notes": dev.notes,
+        "current_license_type": active_lic.license_type if active_lic else None,
+        "current_version": active_lic.version if active_lic else 0,
+        "is_permanent": active_lic.is_permanent if active_lic else False
+    }
+
 @router.get("/{id}", response_model=LicenseResponse)
 def get_license_detail(
     id: int,
@@ -128,15 +158,9 @@ def create_license(
         db.add(dev)
         db.flush()
     else:
-        # Cập nhật thông tin khách nếu có
-        dev.model = req.model.strip()
-        dev.customer_name = req.customer_name.strip()
-        if req.customer_phone:
-            dev.customer_phone = req.customer_phone.strip()
-        if req.customer_email:
-            dev.customer_email = req.customer_email.strip()
-        if req.notes:
-            dev.notes = req.notes.strip()
+        # Mã DF đã tồn tại: Bảo toàn thông tin thiết bị gốc (không ghi đè model/tên khách ngoài ý muốn)
+        if req.notes and req.notes.strip():
+            dev.notes = f"{dev.notes or ''}\n[Cấp lại]: {req.notes.strip()}".strip()
         db.flush()
 
     # Vô hiệu hóa các license cũ của thiết bị này nếu có
@@ -144,8 +168,9 @@ def create_license(
     for old_lic in active_licenses:
         old_lic.status = "SUPERSEDED"
 
-    # Sinh License mới bằng Ed25519
-    version = len(dev.licenses) + 1 if dev.licenses else 1
+    # Sinh License mới bằng Ed25519 (tính version chuẩn dựa trên max version)
+    max_ver = max([l.version for l in dev.licenses], default=0)
+    version = max_ver + 1
     lic_result = generate_license_jwt(
         df=norm_df,
         license_type=req.license_type,

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { licenseApi } from '../api/licenseApi'
 import { Smartphone, Crown, Clock, AlertTriangle, Cpu } from 'lucide-react'
 
-export default function StatsCards() {
+export default function StatsCards({ refreshTrigger = 0 }) {
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -18,7 +18,7 @@ export default function StatsCards() {
       }
     }
     loadStats()
-  }, [])
+  }, [refreshTrigger])
 
   if (loading || !stats) {
     return (

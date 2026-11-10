@@ -70,7 +70,7 @@ class LicenseStorage(context: Context) {
         prefs.edit()
             .putString(KEY_ACTIVE_TOKEN, cleanToken)
             .putLong(KEY_ACTIVATED_AT, nowSec)
-            .apply()
+            .commit()
 
         backupToEnterprisePartition(cleanToken)
     }
@@ -107,7 +107,7 @@ class LicenseStorage(context: Context) {
         prefs.edit()
             .remove(KEY_ACTIVE_TOKEN)
             .remove(KEY_ACTIVATED_AT)
-            .apply()
+            .commit()
 
         clearEnterpriseBackup()
     }

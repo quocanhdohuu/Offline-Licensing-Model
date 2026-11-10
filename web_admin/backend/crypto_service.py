@@ -105,11 +105,12 @@ def generate_license_jwt(
     private_key = load_private_key(priv_key_path)
 
     now_dt = datetime.now(timezone.utc)
-    iat_ts = int(now_dt.timestamp())
+    # Lùi iat 30 phút để tránh lỗi lệch đồng hồ (NOT_YET_VALID) trên các máy PDA chạy 100% Offline
+    iat_ts = int((now_dt - timedelta(minutes=30)).timestamp())
 
     if is_permanent or license_type.upper() == "PERPETUAL":
         exp_dt = None
-        # Vĩnh viễn: Đặt exp năm 2099 (~4.1 tỷ timestamp) hoặc 10 năm theo logic client
+        # Vĩnh viễn: Đặt exp năm 2099 (~4.1 tỷ timestamp) hoặc 100 năm
         exp_ts = int((now_dt + timedelta(days=36500)).timestamp())
         is_permanent = True
     else:
@@ -125,7 +126,7 @@ def generate_license_jwt(
         "iss": "TanHungHa-OLM",
         "sub": "PDA-License",
         "df": norm_df,
-        "type": "PRO" if is_permanent else license_type.upper(),
+        "type": "PRO VĨNH VIỄN" if is_permanent else license_type.upper(),
         "iat": iat_ts,
         "exp": exp_ts,
         "features": features,

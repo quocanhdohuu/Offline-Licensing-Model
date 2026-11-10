@@ -56,7 +56,9 @@ class LicenseValidator(private val context: Context) {
         val exp: Long,
         val features: List<String>,
         val customer: String,
-        val model: String
+        val model: String,
+        val version: Int = 1,
+        val isPermanent: Boolean = false
     )
 
     data class ValidationResult(
@@ -163,17 +165,29 @@ class LicenseValidator(private val context: Context) {
             val meta = json.optJSONObject("meta")
             val customer = meta?.optString("customer") ?: "N/A"
             val model = meta?.optString("model") ?: "N/A"
+            val licVersion = meta?.optInt("license_version", 1) ?: 1
+            val expUtc = meta?.optString("expires_at_utc", "") ?: ""
+            val licType = json.optString("type", "UNKNOWN")
+            val iatVal = json.optLong("iat", 0L)
+            val expVal = json.optLong("exp", 0L)
+            val isPerm = licType.contains("VĨNH VIỄN", ignoreCase = true) ||
+                licType.contains("PERPETUAL", ignoreCase = true) ||
+                expUtc.contains("VĨNH VIỄN", ignoreCase = true) ||
+                expUtc.contains("PERPETUAL", ignoreCase = true) ||
+                (expVal - iatVal > 365L * 20L * 86400L)
 
             LicensePayload(
                 iss = json.optString("iss"),
                 sub = json.optString("sub"),
                 df = json.optString("df"),
-                type = json.optString("type", "UNKNOWN"),
-                iat = json.optLong("iat", 0L),
-                exp = json.optLong("exp", 0L),
+                type = licType,
+                iat = iatVal,
+                exp = expVal,
                 features = featuresList,
                 customer = customer,
-                model = model
+                model = model,
+                version = licVersion,
+                isPermanent = isPerm
             )
         } catch (e: Exception) {
             return ValidationResult(
@@ -243,8 +257,8 @@ class LicenseValidator(private val context: Context) {
             )
         }
 
-        // Kiểm tra thời gian hệ thống trước ngày cấp bản quyền
-        if (nowSec < (payload.iat - CLOCK_TOLERANCE_SECONDS)) {
+        // Kiểm tra thời gian hệ thống trước ngày cấp bản quyền (Cho phép sai lệch tối đa 1 tiếng do đồng hồ offline)
+        if (nowSec < (payload.iat - 3600L)) {
             return ValidationResult(
                 status = LicenseStatus.NOT_YET_VALID,
                 message = "Thời gian hệ thống (${formatEpoch(nowSec)}) trước ngày phát hành bản quyền (${formatEpoch(payload.iat)}).",
@@ -264,9 +278,10 @@ class LicenseValidator(private val context: Context) {
         // Nếu tất cả các tầng phòng thủ đều vượt qua: Cập nhật mốc last_known_time
         storage.updateLastKnownTime(nowSec)
 
+        val expStr = if (payload.isPermanent) "VĨNH VIỄN" else formatEpoch(payload.exp)
         return ValidationResult(
             status = LicenseStatus.VALID,
-            message = "Bản quyền hợp lệ! Gói [${payload.type}] - Hạn đến: ${formatEpoch(payload.exp)}.",
+            message = "Bản quyền hợp lệ! Gói [${payload.type}] (v${payload.version}) - Hạn: $expStr.",
             payload = payload
         )
     }
