@@ -13,8 +13,12 @@ if sys.platform == "win32":
         pass
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-BACKEND_DIR = os.path.join(CURRENT_DIR, "web_admin", "backend")
-FRONTEND_DIR = os.path.join(CURRENT_DIR, "web_admin", "frontend")
+if os.path.exists(os.path.join(CURRENT_DIR, "backend")):
+    BACKEND_DIR = os.path.join(CURRENT_DIR, "backend")
+    FRONTEND_DIR = os.path.join(CURRENT_DIR, "frontend")
+else:
+    BACKEND_DIR = os.path.join(CURRENT_DIR, "web_admin", "backend")
+    FRONTEND_DIR = os.path.join(CURRENT_DIR, "web_admin", "frontend")
 
 def main():
     print("=" * 75)

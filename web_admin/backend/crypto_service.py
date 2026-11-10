@@ -9,11 +9,26 @@ import qrcode
 
 CROCKFORD_ALPHABET = set("0123456789ABCDEFGHJKMNPQRSTVWXYZ")
 
-# Xác định đường dẫn tuyệt đối đến file Private & Public Key trong tools/license_tool
+# Xác định đường dẫn linh hoạt đến file Private & Public Key
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, "..", ".."))
-DEFAULT_PRIV_KEY_PATH = os.path.join(PROJECT_ROOT, "tools", "license_tool", "ed25519_private_key.pem")
-DEFAULT_PUB_KEY_PATH = os.path.join(PROJECT_ROOT, "tools", "license_tool", "ed25519_public_key.pem")
+
+def find_key_path(filename: str) -> str:
+    # 1. Tìm trong thư mục keys/ nội bộ của backend
+    p_keys = os.path.join(CURRENT_DIR, "keys", filename)
+    if os.path.exists(p_keys):
+        return p_keys
+    # 2. Tìm ngay trong thư mục backend/
+    p_cur = os.path.join(CURRENT_DIR, filename)
+    if os.path.exists(p_cur):
+        return p_cur
+    # 3. Tìm trong thư mục tools/license_tool/ của dự án gốc
+    p_tools = os.path.abspath(os.path.join(CURRENT_DIR, "..", "..", "tools", "license_tool", filename))
+    if os.path.exists(p_tools):
+        return p_tools
+    return p_keys
+
+DEFAULT_PRIV_KEY_PATH = find_key_path("ed25519_private_key.pem")
+DEFAULT_PUB_KEY_PATH = find_key_path("ed25519_public_key.pem")
 
 def b64url_encode(data: bytes) -> str:
     """Mã hóa Base64URL không kèm padding '=' theo chuẩn JWT RFC 7515 / RFC 8037."""
